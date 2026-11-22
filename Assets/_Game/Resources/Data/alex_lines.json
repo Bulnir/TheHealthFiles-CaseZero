@@ -1,0 +1,50 @@
+[
+  {
+    "npc": "alex",
+    "line_type": "intro",
+    "text": "VitaPulse is secretly selling our medical records! I found a blog that proves everything, and I already sent you the letter with the link.",
+    "evidence_id": "blog_unverified"
+  },
+  {
+    "npc": "alex",
+    "line_type": "intro",
+    "text": "I found out VitaPulse is just another scam trying to profit off people's fears. Check the letter I sent you—the blog proves it!",
+    "evidence_id": "blog_unverified"
+  },
+  {
+    "npc": "alex",
+    "line_type": "hint",
+    "text": "I don't know the author, but they're the only one saying things are true. Big sites just echo what the companies tell them to.",
+    "evidence_id": "blog_unverified"
+  },
+  {
+    "npc": "alex",
+    "line_type": "hint",
+    "text": "Sorry, no one knows who wrote that blog. I can't find any reliable information about where they get their sources from.",
+    "evidence_id": "blog_unverified"
+  },
+  {
+    "npc": "alex",
+    "line_type": "wrong_answer",
+    "text": "It confirms what I already knew; that document is irrelevant. My skepticism remains unshaken.",
+    "evidence_id": ""
+  },
+  {
+    "npc": "alex",
+    "line_type": "wrong_answer",
+    "text": "I don't see how it relates to anything I've said before. Look closer at the blog I sent you.",
+    "evidence_id": ""
+  },
+  {
+    "npc": "alex",
+    "line_type": "correct_answer",
+    "text": "Okay... the blog is thin. Still, I need to know about the third-party partners clause in their privacy policy.",
+    "evidence_id": "blog_unverified"
+  },
+  {
+    "npc": "alex",
+    "line_type": "clue",
+    "text": "The term \"third-party partners\" isn't clear to me either. They don't specify who or how they share this data—that's what bothers me.",
+    "evidence_id": "policy_42"
+  }
+]

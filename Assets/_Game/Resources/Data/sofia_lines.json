@@ -1,0 +1,32 @@
+[
+  {
+    "npc": "sofia",
+    "line_type": "intro",
+    "text": "Have you seen the VitaPulse video? Millions of views! It saved someone's life—I downloaded it and shared it with everyone!",
+    "evidence_id": "promo_agreement"
+  },
+  {
+    "npc": "sofia",
+    "line_type": "hint",
+    "text": "Millions of people watched it, and the influencer is just sharing a personal experience. It's not even an advertisement!",
+    "evidence_id": "promo_agreement"
+  },
+  {
+    "npc": "sofia",
+    "line_type": "wrong_answer",
+    "text": "Wait, I don't think that proves anything about the video. Check the influencer's profile!",
+    "evidence_id": ""
+  },
+  {
+    "npc": "sofia",
+    "line_type": "correct_answer",
+    "text": "Oh... a promotional agreement? I didn't realize it was sponsored. Wait—I also tapped 'Allow All' on the app permissions!",
+    "evidence_id": "promo_agreement"
+  },
+  {
+    "npc": "sofia",
+    "line_type": "clue",
+    "text": "Thanks for fixing my permissions! By the way, did you see that hospital logo in the viral video? Was the hospital really involved?",
+    "evidence_id": "hospital_claim"
+  }
+]

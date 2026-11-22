@@ -1,0 +1,32 @@
+[
+  {
+    "npc": "daniel",
+    "line_type": "intro",
+    "text": "I've been trying to verify VitaPulse's medical claims through the hospital website, but I found two different portal links and got lost.",
+    "evidence_id": "clinical_guidance"
+  },
+  {
+    "npc": "daniel",
+    "line_type": "hint",
+    "text": "I printed the link list and sent a screenshot claiming official approval. Could you check which link is the verified official portal?",
+    "evidence_id": "clinical_guidance"
+  },
+  {
+    "npc": "daniel",
+    "line_type": "wrong_answer",
+    "text": "That doesn't match the portal guidance I was trying to check. Let's compare the screenshot word by word.",
+    "evidence_id": ""
+  },
+  {
+    "npc": "daniel",
+    "line_type": "correct_answer",
+    "text": "So the screenshot removed the date and added approval wording that isn't in the official portal! Thank you for walking me through it.",
+    "evidence_id": "screenshot_altered"
+  },
+  {
+    "npc": "daniel",
+    "line_type": "clue",
+    "text": "Now I feel much more confident navigating the verified health portal. You have all the official guidance for your final report.",
+    "evidence_id": "clinical_guidance"
+  }
+]

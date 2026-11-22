@@ -1,0 +1,92 @@
+[
+  {
+    "id": "manual_guide",
+    "title": "Investigation Manual",
+    "caseOwner": "prologue",
+    "claim": "Three golden checks: Source - Evidence - Context.",
+    "source": "Digital Health Investigation Office Handbook",
+    "summary": "Always verify who wrote a claim (Source), what supports it (Evidence), and whether details or dates were removed (Context).",
+    "dhliDomain": "Reliability",
+    "usedOnFinalBoard": false
+  },
+  {
+    "id": "letter_alex",
+    "title": "Alex's Letter",
+    "caseOwner": "alex",
+    "claim": "VitaPulse is selling everyone's private medical information!",
+    "source": "Envelope from A. Moretti (Archive Cabinet)",
+    "summary": "Contains a blog URL and a highlighted accusation that VitaPulse secretly sells medical records. Unlocks the blog on the office computer.",
+    "dhliDomain": "Navigation",
+    "usedOnFinalBoard": false
+  },
+  {
+    "id": "blog_unverified",
+    "title": "Unverified Blog Claim",
+    "caseOwner": "alex",
+    "claim": "All medical records are secretly being sold.",
+    "source": "Anonymous Blog (Office Computer)",
+    "summary": "Unidentified author, no traceable supporting sources, and a definitive headline that goes beyond what VitaPulse's privacy policy actually states.",
+    "dhliDomain": "Reliability",
+    "usedOnFinalBoard": false
+  },
+  {
+    "id": "policy_42",
+    "title": "VitaPulse Privacy Policy - Section 4.2",
+    "caseOwner": "alex",
+    "claim": "Some information may be shared with third-party partners.",
+    "source": "VitaPulse Privacy Policy (Simulated)",
+    "summary": "Raises a legitimate privacy question about scope and purpose of third-party sharing, though it does not by itself prove secret sales of all medical records.",
+    "dhliDomain": "Privacy",
+    "usedOnFinalBoard": true
+  },
+  {
+    "id": "promo_agreement",
+    "title": "VitaPulse Promotional Agreement",
+    "caseOwner": "sofia",
+    "claim": "The viral video influencer has a paid promotional relationship with VitaPulse.",
+    "source": "Influencer Profile & Campaign History",
+    "summary": "Commercial sponsorship is relevant when judging the video's independence; popularity alone is not proof of clinical effectiveness.",
+    "dhliDomain": "Reliability",
+    "usedOnFinalBoard": true
+  },
+  {
+    "id": "permissions_corrected",
+    "title": "Privacy Permissions Corrected",
+    "caseOwner": "sofia",
+    "claim": "Sofia selected Allow All (health data, contacts, location, microphone).",
+    "source": "Simulated App Permission Panel",
+    "summary": "A personal health diary only needs explicitly chosen health records; contacts, continuous precise location, and microphone should be turned off.",
+    "dhliDomain": "Privacy",
+    "usedOnFinalBoard": true
+  },
+  {
+    "id": "hospital_claim",
+    "title": "Viral Video - Hospital Endorsement Claim",
+    "caseOwner": "sofia",
+    "claim": "Viral video displays a hospital logo and implies official endorsement.",
+    "source": "Viral Video: Doctors Missed It, But VitaPulse Saved My Life!",
+    "summary": "A logo in a viral video does not prove official hospital involvement; it must be verified against official health sources.",
+    "dhliDomain": "Reliability",
+    "usedOnFinalBoard": true
+  },
+  {
+    "id": "clinical_guidance",
+    "title": "Official Clinical Evidence Guidance",
+    "caseOwner": "daniel",
+    "claim": "Clinical claims for digital health apps require suitable scientific evidence.",
+    "source": "Verified Health Portal -> Health Resources",
+    "summary": "Official public guidance shows no clinical approval or validated early-detection performance for VitaPulse.",
+    "dhliDomain": "Navigation",
+    "usedOnFinalBoard": true
+  },
+  {
+    "id": "screenshot_altered",
+    "title": "Altered Approval Screenshot",
+    "caseOwner": "daniel",
+    "claim": "VitaPulse Is Officially Approved for Early Disease Detection.",
+    "source": "Daniel's Screenshot vs Official Portal Comparison",
+    "summary": "Omits the document's date and context and inserts approval wording absent from the original official portal page.",
+    "dhliDomain": "Reliability",
+    "usedOnFinalBoard": true
+  }
+]
