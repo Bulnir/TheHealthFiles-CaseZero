@@ -19,6 +19,7 @@ namespace HealthFiles
         private Quaternion paperBaseLocalRot;
 
         public bool IsJammed => isJammed;
+        public event System.Action OnJamCleared;
 
         public void Configure(Renderer led, Transform jammedPaper)
         {
@@ -76,6 +77,7 @@ namespace HealthFiles
             {
                 jammedPaperTransform.gameObject.SetActive(false);
             }
+            OnJamCleared?.Invoke();
         }
 
         public void TriggerJamAgain()
