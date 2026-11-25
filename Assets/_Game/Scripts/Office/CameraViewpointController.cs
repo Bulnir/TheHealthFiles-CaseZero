@@ -9,9 +9,12 @@ using UnityEngine.InputSystem;
 namespace HealthFiles
 {
     /// <summary>
-    /// WP2: Smoothly moves the Main Camera between fixed first-person viewpoints around the office,
-    /// AND allows natural free-look around the room by holding Right-Mouse-Button + dragging
-    /// (or pressing A/D / Arrow keys). Left-clicking any 3D object still interacts smoothly.
+    /// WP2: Effortless Point-and-Click Detective Office Camera Controller.
+    /// - Gentle, automatic Mouse Parallax (no buttons held! Moving the mouse subtly tilts/pans your view).
+    /// - Clean Left / Right chair-turn navigation (screen arrows or Q/E keys) cycling naturally around the room:
+    ///   Printer <-> EvidenceBoard <-> Cabinet <-> Desk <-> Bookshelf.
+    /// - Clicking any 3D object zooms cleanly into it; pressing Esc or clicking 'Back to Desk' returns to Desk.
+    /// - Parallax automatically pauses while zoomed into the Computer OS or reading modals.
     /// </summary>
     public class CameraViewpointController : MonoBehaviour
     {
@@ -22,17 +25,31 @@ namespace HealthFiles
         [SerializeField] private List<CameraViewpoint> viewpoints = new List<CameraViewpoint>();
         [SerializeField] private string defaultViewpointId = "Desk";
 
-        [Header("Transition & Free-Look")]
-        [SerializeField] private float moveSpeed = 6f;
-        [SerializeField] private float rotateSpeed = 7f;
-        [SerializeField] private float mouseLookSensitivity = 0.22f;
-        [SerializeField] private float keyLookSpeed = 85f;
-        [SerializeField] private float maxYawOffset = 80f;
-        [SerializeField] private float maxPitchOffset = 32f;
+        [Header("Smooth Transition & Gentle Mouse Parallax")]
+        [SerializeField] private float moveSpeed = 6.5f;
+        [SerializeField] private float rotateSpeed = 7.5f;
+        [SerializeField] private float parallaxMaxYaw = 16f;
+        [SerializeField] private float parallaxMaxPitch = 7f;
+        [SerializeField] private float parallaxSmooth = 5f;
+
+        // Natural spatial order around the room from Left to Right
+        private static readonly string[] RoomTurnOrder =
+        {
+            "Printer",
+            "EvidenceBoard",
+            "Cabinet",
+            "Desk",
+            "Bookshelf"
+        };
 
         private CameraViewpoint currentTarget;
-        private float lookYawOffset;
-        private float lookPitchOffset;
+        private float currentParallaxYaw;
+        private float currentParallaxPitch;
+
+        /// <summary>
+        /// Set true while a fullscreen modal (PC Desktop, Phone, Document) is open so camera stays rock-steady.
+        /// </summary>
+        public bool IsCameraLockedByModal { get; set; }
 
         public event Action<CameraViewpoint> OnViewpointChanged;
         public IReadOnlyList<CameraViewpoint> Viewpoints => viewpoints;
@@ -73,7 +90,6 @@ namespace HealthFiles
         private void Update()
         {
             HandleKeyboardShortcuts();
-            HandleFreeLookInput();
 
             if (currentTarget == null || cameraTransform == null)
                 return;
@@ -84,11 +100,27 @@ namespace HealthFiles
                 Time.deltaTime * moveSpeed
             );
 
-            // Apply natural free-look yaw (world up) + pitch (local right) on top of the current viewpoint's base rotation
+            // Compute gentle mouse-position parallax (zero buttons held!) when not locked by a modal or zoomed into PC
+            float targetYaw = 0f;
+            float targetPitch = 0f;
+            bool allowParallax = !IsCameraLockedByModal && CurrentViewpointId != "Computer";
+
+            if (allowParallax && Screen.width > 0 && Screen.height > 0)
+            {
+                Vector2 mPos = GetMousePosition();
+                float nx = Mathf.Clamp((mPos.x / Screen.width) * 2f - 1f, -1f, 1f);
+                float ny = Mathf.Clamp((mPos.y / Screen.height) * 2f - 1f, -1f, 1f);
+                targetYaw = nx * parallaxMaxYaw;
+                targetPitch = -ny * parallaxMaxPitch;
+            }
+
+            currentParallaxYaw = Mathf.Lerp(currentParallaxYaw, targetYaw, Time.deltaTime * parallaxSmooth);
+            currentParallaxPitch = Mathf.Lerp(currentParallaxPitch, targetPitch, Time.deltaTime * parallaxSmooth);
+
             Quaternion desiredRot =
-                Quaternion.AngleAxis(lookYawOffset, Vector3.up) *
+                Quaternion.AngleAxis(currentParallaxYaw, Vector3.up) *
                 currentTarget.transform.rotation *
-                Quaternion.AngleAxis(lookPitchOffset, Vector3.right);
+                Quaternion.AngleAxis(currentParallaxPitch, Vector3.right);
 
             cameraTransform.rotation = Quaternion.Slerp(
                 cameraTransform.rotation,
@@ -97,56 +129,51 @@ namespace HealthFiles
             );
         }
 
-        private void HandleFreeLookInput()
+        public void TurnLeft()
         {
-            // Skip free-look while hovering an open modal UI panel
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            if (IsCameraLockedByModal) return;
+            if (CurrentViewpointId == "Computer")
+            {
+                MoveToViewpoint("Cabinet");
                 return;
-
-#if ENABLE_INPUT_SYSTEM
-            var mouse = Mouse.current;
-            if (mouse != null && (mouse.rightButton.isPressed || mouse.middleButton.isPressed))
-            {
-                Vector2 delta = mouse.delta.ReadValue();
-                lookYawOffset = Mathf.Clamp(lookYawOffset + delta.x * mouseLookSensitivity, -maxYawOffset, maxYawOffset);
-                lookPitchOffset = Mathf.Clamp(lookPitchOffset - delta.y * mouseLookSensitivity, -maxPitchOffset, maxPitchOffset);
             }
 
-            var kb = Keyboard.current;
-            if (kb != null)
-            {
-                float h = 0f;
-                float v = 0f;
-                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) h -= 1f;
-                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) h += 1f;
-                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) v += 1f;
-                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) v -= 1f;
+            int idx = Array.IndexOf(RoomTurnOrder, CurrentViewpointId);
+            if (idx < 0) idx = 3; // default Desk
+            int nextIdx = Mathf.Max(0, idx - 1);
+            MoveToViewpoint(RoomTurnOrder[nextIdx]);
+        }
 
-                if (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f)
-                {
-                    lookYawOffset = Mathf.Clamp(lookYawOffset + h * keyLookSpeed * Time.deltaTime, -maxYawOffset, maxYawOffset);
-                    lookPitchOffset = Mathf.Clamp(lookPitchOffset - v * keyLookSpeed * 0.65f * Time.deltaTime, -maxPitchOffset, maxPitchOffset);
-                }
-            }
-#else
-            if (Input.GetMouseButton(1) || Input.GetMouseButton(2))
+        public void TurnRight()
+        {
+            if (IsCameraLockedByModal) return;
+            if (CurrentViewpointId == "Computer")
             {
-                lookYawOffset = Mathf.Clamp(lookYawOffset + Input.GetAxis("Mouse X") * 3.5f, -maxYawOffset, maxYawOffset);
-                lookPitchOffset = Mathf.Clamp(lookPitchOffset - Input.GetAxis("Mouse Y") * 3.5f, -maxPitchOffset, maxPitchOffset);
+                MoveToViewpoint("Bookshelf");
+                return;
             }
-            float h = Input.GetAxis("Horizontal");
-            float v = Input.GetAxis("Vertical");
-            if (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f)
-            {
-                lookYawOffset = Mathf.Clamp(lookYawOffset + h * keyLookSpeed * Time.deltaTime, -maxYawOffset, maxYawOffset);
-                lookPitchOffset = Mathf.Clamp(lookPitchOffset - v * keyLookSpeed * 0.65f * Time.deltaTime, -maxPitchOffset, maxPitchOffset);
-            }
-#endif
+
+            int idx = Array.IndexOf(RoomTurnOrder, CurrentViewpointId);
+            if (idx < 0) idx = 3; // default Desk
+            int nextIdx = Mathf.Min(RoomTurnOrder.Length - 1, idx + 1);
+            MoveToViewpoint(RoomTurnOrder[nextIdx]);
+        }
+
+        public bool CanTurnLeft()
+        {
+            int idx = Array.IndexOf(RoomTurnOrder, CurrentViewpointId);
+            return idx > 0 || CurrentViewpointId == "Computer";
+        }
+
+        public bool CanTurnRight()
+        {
+            int idx = Array.IndexOf(RoomTurnOrder, CurrentViewpointId);
+            return (idx >= 0 && idx < RoomTurnOrder.Length - 1) || CurrentViewpointId == "Computer";
         }
 
         private void HandleKeyboardShortcuts()
         {
-            if (viewpoints == null || viewpoints.Count == 0)
+            if (viewpoints == null || viewpoints.Count == 0 || IsCameraLockedByModal)
                 return;
 
 #if ENABLE_INPUT_SYSTEM
@@ -154,6 +181,8 @@ namespace HealthFiles
             if (kb == null) return;
 
             if (kb.escapeKey.wasPressedThisFrame) { MoveToViewpoint(defaultViewpointId); return; }
+            if (kb.qKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) { TurnLeft(); return; }
+            if (kb.eKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) { TurnRight(); return; }
             if (kb.digit1Key.wasPressedThisFrame && viewpoints.Count > 0) MoveToViewpoint(viewpoints[0].viewpointId);
             if (kb.digit2Key.wasPressedThisFrame && viewpoints.Count > 1) MoveToViewpoint(viewpoints[1].viewpointId);
             if (kb.digit3Key.wasPressedThisFrame && viewpoints.Count > 2) MoveToViewpoint(viewpoints[2].viewpointId);
@@ -162,13 +191,21 @@ namespace HealthFiles
             if (kb.digit6Key.wasPressedThisFrame && viewpoints.Count > 5) MoveToViewpoint(viewpoints[5].viewpointId);
 #else
             if (Input.GetKeyDown(KeyCode.Escape)) { MoveToViewpoint(defaultViewpointId); return; }
+            if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.LeftArrow)) { TurnLeft(); return; }
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.RightArrow)) { TurnRight(); return; }
             for (int i = 0; i < Mathf.Min(6, viewpoints.Count); i++)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1 + i))
-                {
-                    MoveToViewpoint(viewpoints[i].viewpointId);
-                }
+                if (Input.GetKeyDown(KeyCode.Alpha1 + i)) MoveToViewpoint(viewpoints[i].viewpointId);
             }
+#endif
+        }
+
+        private static Vector2 GetMousePosition()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+#else
+            return Input.mousePosition;
 #endif
         }
 
@@ -188,8 +225,6 @@ namespace HealthFiles
             }
 
             currentTarget = found;
-            lookYawOffset = 0f;
-            lookPitchOffset = 0f;
             OnViewpointChanged?.Invoke(found);
         }
 
@@ -199,8 +234,6 @@ namespace HealthFiles
             if (found == null) return;
 
             currentTarget = found;
-            lookYawOffset = 0f;
-            lookPitchOffset = 0f;
             if (cameraTransform != null)
             {
                 cameraTransform.position = found.transform.position;
