@@ -24,6 +24,7 @@ namespace HealthFiles
         public event Action OnManualOpened;
         public event Action OnAlexLetterOpened;
         public event Action<string> OnObjectionSplash;
+        public event Action OnCase01Completed;
 
         private void Awake()
         {
@@ -229,6 +230,7 @@ namespace HealthFiles
                 SoundManager.Instance?.Play("evidence_unlock", 0.85f);
                 PersonalizationManager.Instance?.RecordCorrectAction(DhliDomain.Privacy, 12);
                 SetState(MissionState.Sofia_Ready);
+                OnCase01Completed?.Invoke();
                 NotifyStatus("Pinned VitaPulse Privacy Policy - Section 4.2 to the Cork Board! Case 01 Complete! Sofia Romano is calling...");
             }
             else if (currentState == MissionState.FinalBoard_Ready)

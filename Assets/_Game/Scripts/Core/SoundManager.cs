@@ -14,6 +14,10 @@ namespace HealthFiles
         private AudioSource sfxSource;
         private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
 
+        public bool IsMuted { get; private set; }
+        public float MasterVolume { get; private set; } = 1f;
+        public event System.Action OnAudioSettingsChanged;
+
         private static readonly string[] ClipNames =
         {
             "phone_ring",
@@ -49,12 +53,35 @@ namespace HealthFiles
             }
         }
 
+        public void SetMuted(bool muted)
+        {
+            IsMuted = muted;
+            if (sfxSource != null) sfxSource.mute = IsMuted;
+            AudioListener.volume = IsMuted ? 0f : MasterVolume;
+            OnAudioSettingsChanged?.Invoke();
+        }
+
+        public void ToggleMute()
+        {
+            SetMuted(!IsMuted);
+        }
+
+        public void SetMasterVolume(float volume)
+        {
+            MasterVolume = Mathf.Clamp01(volume);
+            if (!IsMuted)
+            {
+                AudioListener.volume = MasterVolume;
+            }
+            OnAudioSettingsChanged?.Invoke();
+        }
+
         public void Play(string clipName, float volume = 0.85f)
         {
-            if (sfxSource == null || string.IsNullOrEmpty(clipName)) return;
+            if (IsMuted || sfxSource == null || string.IsNullOrEmpty(clipName)) return;
             if (clips.TryGetValue(clipName, out AudioClip clip) && clip != null)
             {
-                sfxSource.PlayOneShot(clip, volume);
+                sfxSource.PlayOneShot(clip, volume * MasterVolume);
             }
         }
     }
