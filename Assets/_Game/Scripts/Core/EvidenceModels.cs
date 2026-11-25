@@ -43,6 +43,7 @@ namespace HealthFiles
     /// </summary>
     public enum MissionState
     {
+        Prologue_SupervisorCall,
         Prologue_FindManual,
         Alex_AnswerFirstCall,
         Alex_FindHiddenLetter,

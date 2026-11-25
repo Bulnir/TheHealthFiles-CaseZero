@@ -52,11 +52,13 @@ Allowed `line_type`: `intro`, `hint`, `wrong_answer`, `correct_answer`, `clue`.
 | Interactable ID | 3D Station | Viewpoint ID | Used By |
 |---|---|---|---|
 | `bookshelf_manual` | Bookshelf & Manual | `Bookshelf` | Prologue (WP3) |
-| `desk_phone` | Desk Telephone | `Desk` | WP3 / WP4 / WP5 |
-| `cabinet_alex_letter` | Archive Filing Cabinet | `Cabinet` | Case 01 Alex (WP3) |
+| `desk_phone` | Desk Telephone (Ringing) | `Desk` | WP3 / WP4 / WP5 |
+| `desk_mail_log` | Desk Mail Delivery Log | `Desk` | Case 01 Alex (WP3) |
+| `cabinet_drawer_1` / `2` / `3` | 3D Sliding Archive Drawers | `Cabinet` | Case 01 Alex (WP2/WP3) |
+| `cabinet_alex_letter` | Alex's Yellow Envelope (in Drawer B-02) | `Cabinet` | Case 01 Alex (WP3) |
 | `desk_computer` | Office Computer | `Computer` | WP3 / WP4 / WP5 |
 | `printer_daniel` | Office Printer Tray | `Printer` | Case 03 Daniel (WP5) |
-| `evidence_board` | Wall Evidence Board | `EvidenceBoard` | WP3 + Finale (WP5) |
+| `evidence_board` | Wall Cork Evidence Board | `EvidenceBoard` | WP3 + Finale (WP5) |
 
 ---
 

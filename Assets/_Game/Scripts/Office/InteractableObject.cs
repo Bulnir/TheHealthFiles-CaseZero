@@ -5,7 +5,7 @@ namespace HealthFiles
 {
     /// <summary>
     /// WP2: Attach to any clickable 3D object in the Investigation Office (Phone, Computer, Cabinet,
-    /// Bookshelf, Printer, Evidence Board, etc.).
+    /// Sliding Drawers, Mail Log, Bookshelf, Printer, Evidence Board, etc.).
     /// Highlights on mouse hover and notifies WP3's MissionManager using its unique interactableId.
     /// </summary>
     [RequireComponent(typeof(Collider))]
@@ -32,6 +32,11 @@ namespace HealthFiles
 
         private void Awake()
         {
+            CacheRenderers();
+        }
+
+        private void CacheRenderers()
+        {
             cachedRenderers = GetComponentsInChildren<Renderer>();
             originalColors = new Color[cachedRenderers.Length];
             for (int i = 0; i < cachedRenderers.Length; i++)
@@ -55,7 +60,7 @@ namespace HealthFiles
                     continue;
 
                 Color targetColor = highlighted
-                    ? Color.Lerp(originalColors[i], hoverTint, 0.55f)
+                    ? Color.Lerp(originalColors[i], hoverTint, 0.45f)
                     : originalColors[i];
 
                 SetMaterialColor(cachedRenderers[i].material, targetColor);
@@ -67,6 +72,17 @@ namespace HealthFiles
             if (!string.IsNullOrEmpty(focusViewpointId) && CameraViewpointController.Instance != null)
             {
                 CameraViewpointController.Instance.MoveToViewpoint(focusViewpointId);
+            }
+
+            // If this interactable is a physical 3D sliding drawer, slide it open/closed!
+            SlidingDrawer drawer = GetComponent<SlidingDrawer>();
+            if (drawer != null)
+            {
+                drawer.ToggleDrawer();
+            }
+            else
+            {
+                SoundManager.Instance?.Play("ui_click", 0.55f);
             }
 
             Debug.Log($"[WP2] Clicked interactable: {interactableId} ({displayLabel})");
