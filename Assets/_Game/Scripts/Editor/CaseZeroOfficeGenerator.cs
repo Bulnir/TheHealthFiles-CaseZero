@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem.UI;
 #endif
@@ -70,9 +71,9 @@ namespace HealthFiles.EditorTools
             RenderSettings.ambientGroundColor = new Color(0.24f, 0.22f, 0.20f);
 
             GameObject lightRoot = new GameObject("--- LIGHTING (WP2) ---");
-            CreateDirectionalLight(lightRoot.transform, "SunLight", new Vector3(38f, -125f, 0f), new Color(1f, 0.96f, 0.89f), 1.15f);
-            CreatePointLight(lightRoot.transform, "CeilingGlow", new Vector3(0f, 2.98f, 0.6f), new Color(1f, 0.97f, 0.91f), 12f, 11f);
-            CreatePointLight(lightRoot.transform, "DeskLampGlow", new Vector3(0.68f, 1.18f, 1.48f), new Color(1f, 0.84f, 0.54f), 5.0f, 3.8f);
+            CreateDirectionalLight(lightRoot.transform, "SunLight", new Vector3(38f, -125f, 0f), new Color(1f, 0.96f, 0.89f), 1.10f);
+            CreatePointLight(lightRoot.transform, "CeilingGlow", new Vector3(0f, 2.98f, 0.6f), new Color(1f, 0.97f, 0.91f), 9.5f, 11f);
+            // DeskLampGlow intentionally off so desk paper & PC tower never suffer white specular glare!
             CreatePointLight(lightRoot.transform, "CorridorLightL", new Vector3(-1.8f, 2.85f, 5.1f), new Color(0.94f, 0.97f, 1f), 12f, 10f);
             CreatePointLight(lightRoot.transform, "CorridorLightR", new Vector3(1.8f, 2.85f, 5.1f), new Color(0.94f, 0.97f, 1f), 12f, 10f);
             CreatePointLight(lightRoot.transform, "AcrossRoomLight", new Vector3(0.4f, 2.85f, 8.2f), new Color(1f, 0.94f, 0.82f), 14f, 11f);
@@ -92,33 +93,31 @@ namespace HealthFiles.EditorTools
             // Red Office Chair positioned RIGHT AT THE DESK (facing +Z toward Monitor: rotY = 270)
             PlacePrefabClean(roomRoot.transform, "OfficeChair", P_Chair, new Vector3(0f, 0f, 0.56f), 0.98f, 270f);
 
-            // 4. Interactable: Office Computer (exact real-world proportions: 42cm monitor, 44cm keyboard, 11.5cm mouse + glowing live screen!)
+            // 4. Interactable: Office Computer (exact auto-fit collider + LIVE WorldSpace HealthOS directly on the 3D glass!)
             GameObject computerStation = PlacePrefabClean(roomRoot.transform, "OfficeComputer", P_PC, new Vector3(-0.04f, deskTopY + 0.006f, 1.39f), 0.42f, 90f);
             FixKeyboardAndMouseScale(computerStation, deskTopY + 0.006f);
-            AddLiveMonitorScreenOverlay(computerStation);
-            Bounds pcBounds = GetWorldBounds(computerStation);
-            AddCleanColliderAndInteractable(
+            AddAutoFitColliderAndInteractable(
                 computerStation,
                 "desk_computer",
-                "Office Computer (Click to Open Workstation)",
+                "Office Computer (Click to Zoom Into HealthOS)",
                 "Computer",
-                new Vector3(0.60f, 0.50f, 0.72f),
-                computerStation.transform.InverseTransformPoint(pcBounds.center)
+                padding: 0.03f
             );
+            Vector3 monitorScreenCenter = AttachWorldSpaceMonitorOS(computerStation, computerStation.GetComponent<BoxCollider>());
 
             // PC Tower standing cleanly ON THE RIGHT CORNER OF THE DESK (visible while seated, with glowing green LED & click interaction!)
             GameObject pcTower = PlacePrefabClean(roomRoot.transform, "PCTower", P_PCCase, new Vector3(0.84f, deskTopY, 1.50f), 0.40f, 102f);
             CreateBox(pcTower.transform, "PC_PowerLED", new Vector3(0.105f, 0.34f, -0.04f), new Vector3(0.012f, 0.012f, 0.024f), new Color(0.22f, 0.96f, 0.42f), local: true, removeCollider: true);
-            AddCleanColliderAndInteractable(pcTower, "desk_pc_tower", "Workstation PC Tower (Check Security Status)", "Desk", new Vector3(0.24f, 0.42f, 0.42f), new Vector3(0f, 0.20f, 0f));
+            AddAutoFitColliderAndInteractable(pcTower, "desk_pc_tower", "Workstation PC Tower (Check Security Status)", "Desk", padding: 0.03f);
 
             // 5. Interactable: Sleek Modern Office IP Telephone (angled toward player, real 21cm size!)
             GameObject phone = BuildModernOfficeIPPhone(roomRoot.transform, new Vector3(-0.64f, deskTopY, 1.24f));
             phone.AddComponent<RingingPhoneEffect>();
-            AddCleanColliderAndInteractable(phone, "desk_phone", "Office IP Telephone (Answer / Call Personas)", "Desk", new Vector3(0.28f, 0.18f, 0.26f), new Vector3(0f, 0.08f, 0f));
+            AddAutoFitColliderAndInteractable(phone, "desk_phone", "Office IP Telephone (Answer / Call Personas)", "Desk", padding: 0.035f);
 
-            // 6. Interactable: Mail Delivery Log Clipboard (A4 proportions, right of Desk Mat)
+            // 6. Interactable: Mail Delivery Log Clipboard (A4 proportions, readable 3D text right on the desk!)
             GameObject mailLog = BuildMailLogClipboard(roomRoot.transform, new Vector3(0.54f, deskTopY, 1.12f));
-            AddCleanColliderAndInteractable(mailLog, "desk_mail_log", "Mail Delivery Log (Check Archive Index)", "Desk", new Vector3(0.26f, 0.08f, 0.34f), new Vector3(0f, 0.02f, 0f));
+            AddAutoFitColliderAndInteractable(mailLog, "desk_mail_log", "Mail Delivery Log (Click to Pick Up & Read)", "Desk", padding: 0.03f, minLocalSize: new Vector3(0.24f, 0.07f, 0.32f));
 
             // Clean, Real-World-Proportioned Desk Props (44cm lamp, 9.5cm mug, 13cm pen cup, 20cm plant)
             PlacePrefabClean(roomRoot.transform, "DeskLamp", P_DeskLight, new Vector3(0.58f, deskTopY, 1.58f), 0.44f, 140f);
@@ -139,29 +138,34 @@ namespace HealthFiles.EditorTools
             CreateBox(board.transform, "BoardFrameR", new Vector3(boardWidth * 0.5f + 0.02f, 0.56f, 0f), new Vector3(0.05f, 1.18f, 0.07f), new Color(0.22f, 0.15f, 0.10f), local: true, removeCollider: true);
 
             board.AddComponent<EvidenceBoardVisual>();
-            AddCleanColliderAndInteractable(
+            AddAutoFitColliderAndInteractable(
                 board,
                 "evidence_board",
                 "Evidence Cork Board (Pin & Connect Clues)",
                 "EvidenceBoard",
-                new Vector3(boardWidth + 0.08f, 1.18f, 0.24f),
-                new Vector3(0f, 0.56f, 0f)
+                padding: 0.04f,
+                minLocalSize: new Vector3(1.50f, 1.10f, 0.20f)
             );
 
             // Wall Clock mounted cleanly above the Archive Cabinet on the Left Wall (rotY = 0 -> faces +X!)
             PlacePrefabClean(roomRoot.transform, "WallClock", P_Clock, new Vector3(-3.26f, 2.48f, 2.20f), 0.36f, 0f);
 
-            // 9. LEFT WALL STATION 3: Office Printer (z = -1.15, faces +X cleanly)
+            // 9. LEFT WALL STATION 3: Office Printer with flush blinking Paper-Jam LED + crooked jammed A4 sheet!
             GameObject printer = PlacePrefabClean(roomRoot.transform, "OfficePrinter", P_Printer, new Vector3(-2.74f, 0f, -1.15f), 0.96f, 0f);
-            Bounds printerBounds = GetWorldBounds(printer);
-            CreateBox(printer.transform, "DanielOutputSheet", new Vector3(0.28f, printerBounds.max.y - 0.12f, 0f), new Vector3(0.22f, 0.014f, 0.28f), new Color(0.98f, 0.98f, 0.94f), local: true, removeCollider: true);
-            AddCleanColliderAndInteractable(
+            Bounds pb = GetWorldBounds(printer);
+            Vector3 sheetLocal = printer.transform.InverseTransformPoint(new Vector3(pb.max.x - 0.04f, pb.max.y - 0.10f, pb.center.z));
+            GameObject jammedSheet = CreateBox(printer.transform, "PrinterJammedSheet", sheetLocal, new Vector3(0.22f, 0.010f, 0.26f), new Color(0.95f, 0.94f, 0.89f), local: true, removeCollider: true);
+            jammedSheet.transform.localRotation = Quaternion.Euler(0f, 12f, -10f);
+            Vector3 ledLocal = printer.transform.InverseTransformPoint(new Vector3(pb.max.x - 0.03f, pb.max.y - 0.04f, pb.min.z + 0.14f));
+            GameObject jamLed = CreateBox(printer.transform, "PrinterJamLED", ledLocal, new Vector3(0.036f, 0.022f, 0.036f), new Color(1f, 0.28f, 0.08f), local: true, removeCollider: true);
+            PrinterJamEffect jamFx = printer.AddComponent<PrinterJamEffect>();
+            jamFx.Configure(jamLed.GetComponent<Renderer>(), jammedSheet.transform);
+            AddAutoFitColliderAndInteractable(
                 printer,
                 "printer_daniel",
-                "Office Printer (Output Tray — Case 03 Daniel)",
+                "Office Printer (WARNING: PAPER JAM! Click to Fix)",
                 "Printer",
-                new Vector3(Mathf.Max(0.85f, printerBounds.size.x), Mathf.Max(0.98f, printerBounds.size.y), Mathf.Max(0.85f, printerBounds.size.z)),
-                printer.transform.InverseTransformPoint(printerBounds.center)
+                padding: 0.04f
             );
 
             // Water Dispenser neatly in Front-Left Corner
@@ -182,14 +186,14 @@ namespace HealthFiles.EditorTools
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureA", P_CeilingLight, new Vector3(-1.1f, 3.12f, 0.6f), 0.14f, 0f);
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureB", P_CeilingLight, new Vector3(1.1f, 3.12f, 0.6f), 0.14f, 0f);
 
-            // 12. Camera Viewpoints (EvidenceBoard now cleanly frames the Left Wall Cork Board!)
+            // 12. Camera Viewpoints (VP_Computer zooms right up so the live 3D WorldSpace Monitor fills the screen!)
             GameObject vpRoot = new GameObject("--- VIEWPOINTS (WP2) ---");
             List<CameraViewpoint> viewpoints = new List<CameraViewpoint>
             {
                 CreateViewpoint(vpRoot.transform, "Desk", "Desk", new Vector3(0f, 1.44f, 0.36f), new Vector3(0f, 0.98f, 1.65f)),
-                CreateViewpoint(vpRoot.transform, "Computer", "Computer", new Vector3(0f, 1.12f, 0.66f), new Vector3(0f, 0.98f, 1.38f)),
+                CreateViewpoint(vpRoot.transform, "Computer", "Computer", monitorScreenCenter + new Vector3(0f, 0f, -0.45f), monitorScreenCenter),
                 CreateViewpoint(vpRoot.transform, "Cabinet", "Cabinet", new Vector3(-1.35f, 1.14f, 2.20f), new Vector3(-2.85f, 0.78f, 2.20f)),
-                CreateViewpoint(vpRoot.transform, "Bookshelf", "Bookshelf", new Vector3(1.25f, 1.28f, 1.80f), new Vector3(2.96f, 1.12f, 1.80f)),
+                CreateViewpoint(vpRoot.transform, "Bookshelf", "Bookshelf", new Vector3(1.55f, 1.24f, 1.80f), new Vector3(2.96f, 1.18f, 1.80f)),
                 CreateViewpoint(vpRoot.transform, "Printer", "Printer", new Vector3(-1.15f, 1.22f, -1.15f), new Vector3(-2.74f, 0.68f, -1.15f)),
                 CreateViewpoint(vpRoot.transform, "EvidenceBoard", "Evidence Board", new Vector3(-1.35f, 1.78f, 0.55f), new Vector3(-3.24f, 1.78f, 0.55f))
             };
@@ -199,6 +203,7 @@ namespace HealthFiles.EditorTools
             camObj.tag = "MainCamera";
             Camera cam = camObj.AddComponent<Camera>();
             cam.fieldOfView = 58f;
+            cam.nearClipPlane = 0.05f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.55f, 0.76f, 0.95f);
             camObj.AddComponent<AudioListener>();
@@ -281,25 +286,27 @@ namespace HealthFiles.EditorTools
             }
         }
 
-        private static void AddLiveMonitorScreenOverlay(GameObject pcRoot)
+        private static Vector3 AttachWorldSpaceMonitorOS(GameObject pcRoot, BoxCollider outerCollider)
         {
             Transform monitor = FindChildRecursive(pcRoot.transform, "PC_monitor");
-            if (monitor == null) return;
-            Bounds mb = GetWorldBounds(monitor.gameObject);
+            Vector3 screenCenter = pcRoot.transform.position + new Vector3(0f, 0.28f, -0.05f);
+            Vector2 screenSize = new Vector2(0.54f, 0.31f);
 
-            // Glowing live OS wallpaper + subtle taskbar & notification card right on the 3D monitor face (-Z side)!
-            GameObject screen = new GameObject("LiveMonitorDisplay");
-            screen.transform.SetParent(pcRoot.transform, false);
-            screen.transform.position = new Vector3(mb.center.x, mb.center.y + mb.size.y * 0.06f, mb.min.z - 0.004f);
-            screen.transform.rotation = Quaternion.identity;
+            if (monitor != null)
+            {
+                Bounds mb = GetWorldBounds(monitor.gameObject);
+                screenCenter = new Vector3(mb.center.x, mb.center.y + mb.size.y * 0.055f, mb.min.z - 0.014f);
+                screenSize = new Vector2(mb.size.x * 0.91f, mb.size.y * 0.76f);
+            }
 
-            float sw = mb.size.x * 0.90f;
-            float sh = mb.size.y * 0.74f;
-            CreateBox(screen.transform, "OS_Wallpaper", Vector3.zero, new Vector3(sw, sh, 0.004f), new Color(0.11f, 0.24f, 0.40f), local: true, removeCollider: true);
-            CreateBox(screen.transform, "OS_Taskbar", new Vector3(0f, -sh * 0.44f, -0.003f), new Vector3(sw, sh * 0.11f, 0.003f), new Color(0.06f, 0.09f, 0.14f), local: true, removeCollider: true);
-            CreateBox(screen.transform, "OS_AlertCard1", new Vector3(-sw * 0.18f, sh * 0.14f, -0.003f), new Vector3(sw * 0.50f, sh * 0.22f, 0.003f), new Color(0.88f, 0.94f, 0.99f), local: true, removeCollider: true);
-            CreateBox(screen.transform, "OS_AlertHeader", new Vector3(-sw * 0.18f, sh * 0.22f, -0.005f), new Vector3(sw * 0.50f, sh * 0.06f, 0.002f), new Color(0.84f, 0.22f, 0.20f), local: true, removeCollider: true);
-            CreateBox(screen.transform, "OS_AlertCard2", new Vector3(sw * 0.24f, -sh * 0.08f, -0.003f), new Vector3(sw * 0.34f, sh * 0.30f, 0.003f), new Color(0.18f, 0.44f, 0.66f), local: true, removeCollider: true);
+            GameObject osHost = new GameObject("WorldSpaceMonitorOS_Host");
+            osHost.transform.SetParent(pcRoot.transform, false);
+            osHost.transform.position = screenCenter;
+            osHost.transform.rotation = Quaternion.identity;
+
+            WorldSpaceMonitorOS os = osHost.AddComponent<WorldSpaceMonitorOS>();
+            os.Configure(outerCollider, screenSize);
+            return screenCenter;
         }
 
         private static Transform FindChildRecursive(Transform root, string targetName)
@@ -457,19 +464,98 @@ namespace HealthFiles.EditorTools
             CreateBox(ext.transform, "Across_ScreenFace", new Vector3(0.55f, 1.75f, 9.98f), new Vector3(2.26f, 1.12f, 0.02f), new Color(0.92f, 0.96f, 0.99f), removeCollider: true);
             CreateBox(ext.transform, "Across_ScreenAccent", new Vector3(0.55f, 2.12f, 9.96f), new Vector3(2.00f, 0.14f, 0.01f), navyAccent, removeCollider: true);
 
-            // Detailed modern city skyline with glowing glass office windows & distant trees outside the right window!
-            BuildCitySkyscraper(ext.transform, "City_Bldg1", new Vector3(13.8f, 0f, -4.4f), new Vector3(3.0f, 11.5f, 3.2f), new Color(0.76f, 0.74f, 0.70f), 6, 4);
-            BuildCitySkyscraper(ext.transform, "City_Bldg2", new Vector3(15.6f, 0f, -0.7f), new Vector3(3.4f, 14.5f, 3.8f), new Color(0.66f, 0.72f, 0.78f), 8, 5);
-            BuildCitySkyscraper(ext.transform, "City_Bldg3", new Vector3(13.0f, 0f, 2.9f), new Vector3(2.8f, 9.8f, 3.0f), new Color(0.80f, 0.75f, 0.68f), 5, 4);
-            BuildCitySkyscraper(ext.transform, "City_Bldg4", new Vector3(18.5f, 0f, 1.3f), new Vector3(3.8f, 17.5f, 4.2f), new Color(0.58f, 0.65f, 0.74f), 9, 5);
-            // Warm street-level greenery & horizon ground visible below the buildings
-            CreateBox(ext.transform, "City_StreetGround", new Vector3(13f, -1.6f, 0f), new Vector3(18f, 0.2f, 24f), new Color(0.52f, 0.54f, 0.52f), removeCollider: true);
-            for (int t = 0; t < 5; t++)
+            // === 5TH-FLOOR ELEVATED CITY SKYLINE (fills BOTH left & right panoramic window views!) ===
+            // Street level is 11 meters below our 5th-floor office!
+            CreateBox(ext.transform, "City_StreetGround", new Vector3(18f, -11.2f, -2f), new Vector3(32f, 0.4f, 44f), new Color(0.42f, 0.44f, 0.46f), removeCollider: true);
+
+            // Midground avenue buildings (covering z = -22 to +7 so even the far-right window pane has charming rooftops!)
+            BuildCitySkyscraper(ext.transform, "City_FarRightLow1", new Vector3(14.8f, -11f, -21.0f), new Vector3(3.6f, 13.4f, 4.2f), new Color(0.82f, 0.72f, 0.62f), 5, 4);
+            BuildCitySkyscraper(ext.transform, "City_FarRightLow2", new Vector3(15.2f, -11f, -15.8f), new Vector3(3.8f, 14.2f, 4.4f), new Color(0.76f, 0.76f, 0.72f), 5, 4);
+            BuildCitySkyscraper(ext.transform, "City_Mid1", new Vector3(14.5f, -11f, -9.8f), new Vector3(3.4f, 21.0f, 3.8f), new Color(0.76f, 0.72f, 0.66f), 8, 4);
+            BuildCitySkyscraper(ext.transform, "City_Mid2", new Vector3(15.2f, -11f, -5.4f), new Vector3(3.6f, 24.5f, 4.0f), new Color(0.64f, 0.70f, 0.78f), 9, 5);
+            BuildCitySkyscraper(ext.transform, "City_Mid3", new Vector3(14.0f, -11f, -1.1f), new Vector3(3.2f, 19.5f, 3.6f), new Color(0.80f, 0.76f, 0.70f), 7, 4);
+            BuildCitySkyscraper(ext.transform, "City_Mid4", new Vector3(15.6f, -11f,  3.2f), new Vector3(3.5f, 26.0f, 3.8f), new Color(0.60f, 0.66f, 0.74f), 10, 5);
+            BuildCitySkyscraper(ext.transform, "City_Mid5", new Vector3(14.2f, -11f,  7.4f), new Vector3(3.2f, 20.5f, 3.6f), new Color(0.74f, 0.70f, 0.65f), 8, 4);
+
+            // Tall distant background skyline towers for rich urban depth (including far-right sky!)
+            BuildCitySkyscraper(ext.transform, "City_Far0", new Vector3(24.0f, -11f, -18.5f), new Vector3(4.2f, 16.5f, 4.6f), new Color(0.66f, 0.72f, 0.80f), 6, 4);
+            BuildCitySkyscraper(ext.transform, "City_Far1", new Vector3(23.5f, -11f, -12.0f), new Vector3(4.2f, 30.0f, 4.8f), new Color(0.56f, 0.63f, 0.73f), 11, 5);
+            BuildCitySkyscraper(ext.transform, "City_Far2", new Vector3(24.5f, -11f,  -7.2f), new Vector3(4.5f, 34.0f, 5.0f), new Color(0.50f, 0.58f, 0.68f), 12, 5);
+            BuildCitySkyscraper(ext.transform, "City_Far3", new Vector3(22.8f, -11f,  -2.8f), new Vector3(4.0f, 28.0f, 4.4f), new Color(0.60f, 0.66f, 0.75f), 10, 5);
+            BuildCitySkyscraper(ext.transform, "City_Far4", new Vector3(25.0f, -11f,   1.6f), new Vector3(4.4f, 32.0f, 4.8f), new Color(0.52f, 0.60f, 0.70f), 11, 5);
+
+            // Fluffy multi-sphere drifting white clouds floating HIGH in the upper blue sky well above rooftops!
+            BuildDriftingCloud(ext.transform, "SkyCloud_1", new Vector3(26f,  9.2f, -16.5f), 1.15f);
+            BuildDriftingCloud(ext.transform, "SkyCloud_2", new Vector3(28f, 10.6f,  -9.0f), 1.30f);
+            BuildDriftingCloud(ext.transform, "SkyCloud_3", new Vector3(25f,  8.8f,  -2.5f), 1.00f);
+            BuildDriftingCloud(ext.transform, "SkyCloud_4", new Vector3(29f, 11.2f,   4.5f), 1.25f);
+            BuildDriftingCloud(ext.transform, "SkyCloud_5", new Vector3(27f,  9.8f, -22.0f), 1.10f);
+
+            // Tall boulevard trees way down on the street — only their organic rounded green crowns peek far below!
+            float[] treeZs = { -12.0f, -6.5f, -3.2f, 0.4f, 3.8f };
+            for (int t = 0; t < treeZs.Length; t++)
             {
-                float tz = -4.2f + t * 2.1f;
-                CreateBox(ext.transform, $"City_TreeCanopy_{t}", new Vector3(9.4f, 0.9f, tz), new Vector3(1.1f, 1.2f, 1.1f), new Color(0.28f, 0.48f, 0.30f), removeCollider: true);
-                CreateBox(ext.transform, $"City_TreeTrunk_{t}", new Vector3(9.4f, -0.4f, tz), new Vector3(0.22f, 1.5f, 0.22f), new Color(0.36f, 0.26f, 0.18f), removeCollider: true);
+                BuildOrganicBoulevardTree(ext.transform, $"City_Tree_{t}", new Vector3(10.5f, -11f, treeZs[t]));
             }
+        }
+
+        private static void BuildDriftingCloud(Transform parent, string name, Vector3 pos, float scale)
+        {
+            GameObject cloud = new GameObject(name);
+            cloud.transform.SetParent(parent, false);
+            cloud.transform.position = pos;
+            cloud.transform.localScale = Vector3.one * scale;
+            cloud.AddComponent<CloudDrift>();
+
+            Color cWhite = new Color(0.97f, 0.98f, 1.0f);
+            CreateSphere(cloud.transform, $"{name}_P1", new Vector3(0f, 0f, 0f), new Vector3(2.2f, 1.3f, 2.8f), cWhite);
+            CreateSphere(cloud.transform, $"{name}_P2", new Vector3(0.2f, 0.4f, 1.3f), new Vector3(1.8f, 1.1f, 2.0f), cWhite);
+            CreateSphere(cloud.transform, $"{name}_P3", new Vector3(-0.2f, 0.25f, -1.4f), new Vector3(1.7f, 1.0f, 1.9f), cWhite);
+            CreateSphere(cloud.transform, $"{name}_P4", new Vector3(0f, 0.65f, 0.2f), new Vector3(1.5f, 1.0f, 1.6f), cWhite);
+        }
+
+        private static void BuildOrganicBoulevardTree(Transform parent, string name, Vector3 groundPos)
+        {
+            GameObject tree = new GameObject(name);
+            tree.transform.SetParent(parent, false);
+            tree.transform.position = groundPos;
+
+            // Tall trunk rising from street level (-11m) up to ~-2.5m
+            CreateBox(tree.transform, $"{name}_Trunk", new Vector3(0f, 4.2f, 0f), new Vector3(0.45f, 8.4f, 0.45f), new Color(0.34f, 0.25f, 0.18f), local: true, removeCollider: true);
+
+            // Multi-sphere layered lush foliage crown (only top tips peek gently below the 5th-floor sill!)
+            Color leaf1 = new Color(0.24f, 0.44f, 0.28f);
+            Color leaf2 = new Color(0.30f, 0.52f, 0.32f);
+            Color leaf3 = new Color(0.20f, 0.38f, 0.24f);
+            CreateSphere(tree.transform, $"{name}_CrownMain", new Vector3(0f, 9.2f, 0f), new Vector3(2.8f, 2.3f, 2.8f), leaf1);
+            CreateSphere(tree.transform, $"{name}_CrownTop", new Vector3(0.2f, 10.3f, 0.1f), new Vector3(2.0f, 1.7f, 2.0f), leaf2);
+            CreateSphere(tree.transform, $"{name}_CrownSideA", new Vector3(-0.7f, 9.0f, 0.8f), new Vector3(1.9f, 1.6f, 1.9f), leaf3);
+            CreateSphere(tree.transform, $"{name}_CrownSideB", new Vector3(0.6f, 8.8f, -0.9f), new Vector3(2.1f, 1.7f, 2.1f), leaf2);
+        }
+
+        private static void CreateSphere(Transform parent, string name, Vector3 localPos, Vector3 scale, Color color)
+        {
+            GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            obj.name = name;
+            obj.transform.SetParent(parent, false);
+            obj.transform.localPosition = localPos;
+            obj.transform.localScale = scale;
+            Collider c = obj.GetComponent<Collider>();
+            if (c != null) Object.DestroyImmediate(c);
+
+            Renderer rend = obj.GetComponent<Renderer>();
+            string matPath = $"{MaterialFolder}/Mat_{name}.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+            else mat.color = color;
+            EditorUtility.SetDirty(mat);
+            rend.sharedMaterial = mat;
         }
 
         private static void BuildCitySkyscraper(Transform parent, string name, Vector3 basePos, Vector3 size, Color facadeColor, int floors, int cols)
@@ -479,25 +565,24 @@ namespace HealthFiles.EditorTools
             bldg.transform.position = basePos;
 
             Color trimColor = facadeColor * 0.78f;
-            Color glassBlue = new Color(0.38f, 0.58f, 0.76f);
+            Color glassBlue = new Color(0.36f, 0.56f, 0.75f);
             Color warmLit = new Color(0.96f, 0.88f, 0.62f);
 
-            // Main building tower + architectural roof parapet + rooftop AC box
-            CreateBox(bldg.transform, $"{name}_Body", new Vector3(0f, size.y * 0.5f - 1.5f, 0f), size, facadeColor, local: true, removeCollider: true);
-            CreateBox(bldg.transform, $"{name}_RoofCap", new Vector3(0f, size.y - 1.40f, 0f), new Vector3(size.x + 0.18f, 0.24f, size.z + 0.18f), trimColor, local: true, removeCollider: true);
-            CreateBox(bldg.transform, $"{name}_RoofUnit", new Vector3(0.2f, size.y - 1.05f, 0.2f), new Vector3(size.x * 0.35f, 0.45f, size.z * 0.35f), trimColor, local: true, removeCollider: true);
+            // Main building tower sitting cleanly on basePos.y
+            CreateBox(bldg.transform, $"{name}_Body", new Vector3(0f, size.y * 0.5f, 0f), size, facadeColor, local: true, removeCollider: true);
+            CreateBox(bldg.transform, $"{name}_RoofCap", new Vector3(0f, size.y + 0.12f, 0f), new Vector3(size.x + 0.18f, 0.24f, size.z + 0.18f), trimColor, local: true, removeCollider: true);
+            CreateBox(bldg.transform, $"{name}_RoofUnit", new Vector3(0.2f, size.y + 0.45f, 0.2f), new Vector3(size.x * 0.35f, 0.55f, size.z * 0.35f), trimColor, local: true, removeCollider: true);
 
             // Window grid on the -X face (facing straight toward our office panoramic window!)
             float faceX = -size.x * 0.5f - 0.03f;
-            float usableH = size.y - 2.6f;
+            float usableH = size.y - 2.4f;
             float usableZ = size.z - 0.7f;
             float winH = (usableH / floors) * 0.56f;
             float winW = (usableZ / cols) * 0.64f;
 
             for (int f = 0; f < floors; f++)
             {
-                float wy = 0.2f + (f + 0.5f) * (usableH / floors);
-                // Horizontal architectural floor ledge
+                float wy = 1.4f + (f + 0.5f) * (usableH / floors);
                 CreateBox(bldg.transform, $"{name}_Ledge_{f}", new Vector3(faceX - 0.02f, wy - winH * 0.65f, 0f), new Vector3(0.08f, 0.08f, size.z + 0.06f), trimColor, local: true, removeCollider: true);
 
                 for (int c = 0; c < cols; c++)
@@ -608,56 +693,108 @@ namespace HealthFiles.EditorTools
                 CreateBox(shelf.transform, $"BC_Shelf_{y:F2}", new Vector3(0f, y, 0f), new Vector3(0.42f, 0.035f, 1.24f), woodMid, local: true, removeCollider: true);
             }
 
-            Color[] bookPalette =
-            {
-                new Color(0.18f, 0.28f, 0.44f),
-                new Color(0.56f, 0.18f, 0.18f),
-                new Color(0.18f, 0.40f, 0.28f),
-                new Color(0.42f, 0.34f, 0.24f),
-                new Color(0.24f, 0.24f, 0.30f),
-                new Color(0.62f, 0.44f, 0.18f)
-            };
+            // === DETAILED HARDCOVER BOOKS WITH WHITE PAGES, SPINE BANDS & READABLE 3D SPINE TITLES! ===
+            Color goldAccent = new Color(0.88f, 0.74f, 0.32f);
+            Color silverAccent = new Color(0.82f, 0.84f, 0.88f);
 
-            for (int i = 0; i < 6; i++)
+            // Shelf 1 (y = 0.68): Reference Health & Legal Volumes + Clickable Easter Egg Book #1 ("PRIVACY")
+            CreateDetailedBook(shelf.transform, "Book_Ethics",   new Vector3(0.02f, 0.68f, -0.46f), 0.28f, 0.055f, 0.22f, new Color(0.18f, 0.26f, 0.38f), "ETHICS",   goldAccent);
+            CreateDetailedBook(shelf.transform, "Book_GDPR",     new Vector3(0.02f, 0.68f, -0.39f), 0.26f, 0.050f, 0.21f, new Color(0.32f, 0.22f, 0.20f), "GDPR",     silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Clinical", new Vector3(0.02f, 0.68f, -0.32f), 0.29f, 0.056f, 0.22f, new Color(0.20f, 0.34f, 0.34f), "CLINICAL", goldAccent);
+            CreateDetailedBook(shelf.transform, "Book_Stats",    new Vector3(0.02f, 0.68f, -0.25f), 0.25f, 0.048f, 0.20f, new Color(0.36f, 0.30f, 0.22f), "STATS",    silverAccent);
+
+            // Clickable Easter-Egg Book #1: Digital Privacy 101 (Emerald Green, pulled slightly forward!)
+            GameObject bookPrivacy = CreateDetailedBook(shelf.transform, "Book_Privacy101", new Vector3(-0.02f, 0.68f, 0.14f), 0.28f, 0.060f, 0.22f, new Color(0.14f, 0.44f, 0.30f), "PRIVACY", goldAccent);
+            AddCleanColliderAndInteractable(bookPrivacy, "book_easter_privacy", "Book: 'Digital Privacy 101' (Read)", "Bookshelf", new Vector3(0.24f, 0.30f, 0.10f), new Vector3(0f, 0.14f, 0f));
+
+            CreateDetailedBook(shelf.transform, "Book_Cases24",  new Vector3(0.02f, 0.68f, 0.24f), 0.27f, 0.055f, 0.22f, new Color(0.26f, 0.28f, 0.34f), "FILES 24", silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Cases25",  new Vector3(0.02f, 0.68f, 0.31f), 0.27f, 0.055f, 0.22f, new Color(0.26f, 0.28f, 0.34f), "FILES 25", silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Law",      new Vector3(0.02f, 0.68f, 0.39f), 0.29f, 0.058f, 0.22f, new Color(0.42f, 0.20f, 0.20f), "EU LAW",   goldAccent);
+
+            // Shelf 2 (y = 1.14): Eye-Level Shelf with INVESTIGATION MANUAL + Clickable Easter Egg Book #2 ("MYTHS")!
+            CreateDetailedBook(shelf.transform, "Book_Media",    new Vector3(0.02f, 1.14f, -0.46f), 0.26f, 0.050f, 0.21f, new Color(0.30f, 0.34f, 0.40f), "MEDIA",    silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Logic",    new Vector3(0.02f, 1.14f, -0.39f), 0.24f, 0.048f, 0.20f, new Color(0.44f, 0.34f, 0.22f), "LOGIC",    goldAccent);
+            CreateDetailedBook(shelf.transform, "Book_Data",     new Vector3(0.02f, 1.14f, -0.32f), 0.27f, 0.052f, 0.21f, new Color(0.22f, 0.36f, 0.42f), "DATA",     silverAccent);
+
+            // THE INVESTIGATION MANUAL: Sleek Navy-Blue & Gold Leather Handbook, upright & pulled 5cm forward with red bookmark!
+            GameObject manual = CreateDetailedBook(shelf.transform, "InvestigationManual", new Vector3(-0.04f, 1.14f, -0.04f), 0.30f, 0.068f, 0.23f, new Color(0.11f, 0.20f, 0.38f), "MANUAL", goldAccent);
+            // Red silk bookmark ribbon peeking out the top of the Manual
+            CreateBox(manual.transform, "ManualBookmark", new Vector3(-0.08f, 0.315f, 0f), new Vector3(0.015f, 0.04f, 0.022f), new Color(0.84f, 0.16f, 0.16f), local: true, removeCollider: true);
+            AddCleanColliderAndInteractable(manual, "bookshelf_manual", "Investigation Manual (Pick Up — Essential!)", "Bookshelf", new Vector3(0.26f, 0.34f, 0.14f), new Vector3(0f, 0.15f, 0f));
+
+            // Clickable Easter-Egg Book #2: 101 Viral Health Myths (Deep Burgundy, pulled slightly forward!)
+            GameObject bookMyths = CreateDetailedBook(shelf.transform, "Book_HealthMyths", new Vector3(-0.02f, 1.14f, 0.20f), 0.27f, 0.058f, 0.21f, new Color(0.56f, 0.16f, 0.18f), "MYTHS", goldAccent);
+            AddCleanColliderAndInteractable(bookMyths, "book_easter_myths", "Book: '101 Viral Health Myths' (Read)", "Bookshelf", new Vector3(0.24f, 0.30f, 0.10f), new Vector3(0f, 0.14f, 0f));
+
+            CreateDetailedBook(shelf.transform, "Book_Journal",  new Vector3(0.02f, 1.14f, 0.31f), 0.25f, 0.050f, 0.20f, new Color(0.24f, 0.36f, 0.28f), "JOURNAL",  silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Notes",    new Vector3(0.02f, 1.14f, 0.38f), 0.23f, 0.046f, 0.20f, new Color(0.46f, 0.38f, 0.26f), "NOTES",    goldAccent);
+
+            // Shelf 3 (y = 1.60): Upper Reference Shelf + Clickable Easter Egg Book #3 ("COFFEE")!
+            CreateDetailedBook(shelf.transform, "Book_Archive1", new Vector3(0.02f, 1.60f, -0.44f), 0.26f, 0.052f, 0.21f, new Color(0.28f, 0.26f, 0.32f), "VOL I",    silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Archive2", new Vector3(0.02f, 1.60f, -0.37f), 0.26f, 0.052f, 0.21f, new Color(0.28f, 0.26f, 0.32f), "VOL II",   silverAccent);
+            CreateDetailedBook(shelf.transform, "Book_Archive3", new Vector3(0.02f, 1.60f, -0.30f), 0.26f, 0.052f, 0.21f, new Color(0.28f, 0.26f, 0.32f), "VOL III",  silverAccent);
+
+            // Clickable Easter-Egg Book #3: Detective's Coffee Guide (Warm Caramel!)
+            GameObject bookCoffee = CreateDetailedBook(shelf.transform, "Book_CoffeeGuide", new Vector3(-0.02f, 1.60f, 0.08f), 0.25f, 0.058f, 0.21f, new Color(0.62f, 0.40f, 0.18f), "COFFEE", goldAccent);
+            AddCleanColliderAndInteractable(bookCoffee, "book_easter_coffee", "Book: 'Detective's Coffee Guide' (Read)", "Bookshelf", new Vector3(0.24f, 0.28f, 0.10f), new Vector3(0f, 0.13f, 0f));
+
+            CreateDetailedBook(shelf.transform, "Book_PubHealth",new Vector3(0.02f, 1.60f, 0.22f), 0.28f, 0.055f, 0.22f, new Color(0.18f, 0.34f, 0.44f), "eHEALTH",  goldAccent);
+            CreateDetailedBook(shelf.transform, "Book_Guide",    new Vector3(0.02f, 1.60f, 0.30f), 0.25f, 0.050f, 0.21f, new Color(0.34f, 0.24f, 0.30f), "POLICY",   silverAccent);
+        }
+
+        /// <summary>
+        /// Builds a realistic hardcover book standing on a right-wall shelf (spine faces -X into the room)
+        /// with front/back cover boards, cream page block, metallic spine bands, and readable 3D spine lettering!
+        /// </summary>
+        private static GameObject CreateDetailedBook(
+            Transform parent,
+            string name,
+            Vector3 bottomCenterLocalPos,
+            float height,
+            float thickness,
+            float depth,
+            Color coverColor,
+            string spineTitle,
+            Color accentColor)
+        {
+            GameObject book = new GameObject(name);
+            book.transform.SetParent(parent, false);
+            book.transform.localPosition = bottomCenterLocalPos;
+
+            float boardThick = 0.006f;
+            Color pageCream = new Color(0.95f, 0.93f, 0.87f);
+
+            // Spine (facing -X)
+            CreateBox(book.transform, $"{name}_Spine", new Vector3(-depth * 0.5f + 0.006f, height * 0.5f, 0f), new Vector3(0.012f, height, thickness), coverColor, local: true, removeCollider: true);
+            // Left & Right Hardcover Boards
+            CreateBox(book.transform, $"{name}_CoverL", new Vector3(0f, height * 0.5f, -thickness * 0.5f + boardThick * 0.5f), new Vector3(depth, height, boardThick), coverColor, local: true, removeCollider: true);
+            CreateBox(book.transform, $"{name}_CoverR", new Vector3(0f, height * 0.5f,  thickness * 0.5f - boardThick * 0.5f), new Vector3(depth, height, boardThick), coverColor, local: true, removeCollider: true);
+            // Inset Cream-White Paper Pages Block
+            CreateBox(book.transform, $"{name}_Pages", new Vector3(0.006f, height * 0.5f, 0f), new Vector3(depth - 0.014f, height - 0.012f, thickness - boardThick * 2.1f), pageCream, local: true, removeCollider: true);
+            // Metallic decorative bands on the spine
+            CreateBox(book.transform, $"{name}_BandTop", new Vector3(-depth * 0.5f - 0.001f, height * 0.84f, 0f), new Vector3(0.004f, 0.010f, thickness + 0.002f), accentColor, local: true, removeCollider: true);
+            CreateBox(book.transform, $"{name}_BandBot", new Vector3(-depth * 0.5f - 0.001f, height * 0.16f, 0f), new Vector3(0.004f, 0.010f, thickness + 0.002f), accentColor, local: true, removeCollider: true);
+
+            // Crisp readable 3D Spine Title facing -X (out into the room!)
+            if (!string.IsNullOrEmpty(spineTitle))
             {
-                float zOff = -0.48f + i * 0.075f;
-                CreateBox(shelf.transform, $"BinderA_{i}", new Vector3(0.02f, 0.84f, zOff), new Vector3(0.26f, 0.30f, 0.055f), bookPalette[i % bookPalette.Length], local: true, removeCollider: true);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                float zOff = 0.20f + i * 0.07f;
-                CreateBox(shelf.transform, $"BinderB_{i}", new Vector3(0.02f, 0.82f, zOff), new Vector3(0.24f, 0.26f, 0.05f), bookPalette[(i + 2) % bookPalette.Length], local: true, removeCollider: true);
+                GameObject txtObj = new GameObject($"{name}_SpineTitle");
+                txtObj.transform.SetParent(book.transform, false);
+                txtObj.transform.localPosition = new Vector3(-depth * 0.5f - 0.004f, height * 0.50f, 0f);
+                // Rotate so text faces -X and reads vertically along the spine
+                txtObj.transform.localRotation = Quaternion.Euler(0f, 90f, 90f);
+                txtObj.transform.localScale = Vector3.one * 0.008f;
+
+                TextMesh tm = txtObj.AddComponent<TextMesh>();
+                tm.text = spineTitle;
+                tm.fontSize = 34;
+                tm.fontStyle = FontStyle.Bold;
+                tm.anchor = TextAnchor.MiddleCenter;
+                tm.alignment = TextAlignment.Center;
+                tm.color = accentColor;
             }
 
-            for (int i = 0; i < 5; i++)
-            {
-                float zOff = -0.50f + i * 0.062f;
-                float h = 0.22f + (i % 3) * 0.03f;
-                CreateBox(shelf.transform, $"BookMidL_{i}", new Vector3(0.03f, 1.14f + h * 0.5f, zOff), new Vector3(0.22f, h, 0.045f), bookPalette[(i + 1) % bookPalette.Length], local: true, removeCollider: true);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                float zOff = 0.24f + i * 0.062f;
-                float h = 0.23f + (i % 2) * 0.04f;
-                CreateBox(shelf.transform, $"BookMidR_{i}", new Vector3(0.03f, 1.14f + h * 0.5f, zOff), new Vector3(0.22f, h, 0.045f), bookPalette[(i + 3) % bookPalette.Length], local: true, removeCollider: true);
-            }
-
-            GameObject manual = new GameObject("InvestigationManual");
-            manual.transform.SetParent(shelf.transform, false);
-            manual.transform.localPosition = new Vector3(-0.04f, 1.29f, 0.0f);
-            manual.transform.localRotation = Quaternion.Euler(0f, 18f, -12f);
-            CreateBox(manual.transform, "ManualCover", Vector3.zero, new Vector3(0.045f, 0.28f, 0.21f), new Color(0.92f, 0.72f, 0.16f), local: true, removeCollider: true);
-            CreateBox(manual.transform, "ManualBadge", new Vector3(-0.025f, 0.04f, 0f), new Vector3(0.008f, 0.08f, 0.14f), new Color(0.14f, 0.26f, 0.44f), local: true, removeCollider: true);
-            AddCleanColliderAndInteractable(manual, "bookshelf_manual", "Investigation Manual (Source - Evidence - Context)", "Bookshelf", new Vector3(0.22f, 0.34f, 0.28f), Vector3.zero);
-
-            for (int i = 0; i < 8; i++)
-            {
-                float zOff = -0.46f + i * 0.07f;
-                float h = 0.24f + (i % 3) * 0.025f;
-                CreateBox(shelf.transform, $"BookTop_{i}", new Vector3(0.03f, 1.60f + h * 0.5f, zOff), new Vector3(0.22f, h, 0.052f), bookPalette[i % bookPalette.Length], local: true, removeCollider: true);
-            }
-
-            AddCleanColliderAndInteractable(shelf, "bookshelf_manual", "Office Bookcase — Pick Up Investigation Manual", "Bookshelf", new Vector3(0.48f, 2.04f, 1.36f), new Vector3(0f, 1.02f, 0f));
+            return book;
         }
 
         private static GameObject PlacePrefabClean(
@@ -709,11 +846,44 @@ namespace HealthFiles.EditorTools
             root.transform.position = pos;
             root.transform.rotation = Quaternion.Euler(0f, -14f, 0f);
 
-            CreateBox(root.transform, "ClipboardWood", new Vector3(0f, 0.007f, 0f), new Vector3(0.22f, 0.014f, 0.30f), new Color(0.48f, 0.31f, 0.18f), local: true, removeCollider: true);
-            CreateBox(root.transform, "LogPaper", new Vector3(0f, 0.016f, -0.01f), new Vector3(0.19f, 0.005f, 0.25f), new Color(0.96f, 0.95f, 0.90f), local: true, removeCollider: true);
-            CreateBox(root.transform, "LogClip", new Vector3(0f, 0.022f, 0.12f), new Vector3(0.08f, 0.012f, 0.032f), new Color(0.72f, 0.74f, 0.78f), local: true, removeCollider: true);
-            CreateBox(root.transform, "LogHeaderStripe", new Vector3(0f, 0.0195f, 0.075f), new Vector3(0.15f, 0.003f, 0.022f), new Color(0.16f, 0.38f, 0.65f), local: true, removeCollider: true);
+            CreateBox(root.transform, "ClipboardWood", new Vector3(0f, 0.007f, 0f), new Vector3(0.22f, 0.014f, 0.30f), new Color(0.44f, 0.27f, 0.15f), local: true, removeCollider: true);
+            CreateBox(root.transform, "LogPaper", new Vector3(0f, 0.016f, -0.01f), new Vector3(0.19f, 0.005f, 0.25f), new Color(0.91f, 0.89f, 0.82f), local: true, removeCollider: true);
+            CreateBox(root.transform, "LogClip", new Vector3(0f, 0.022f, 0.12f), new Vector3(0.08f, 0.012f, 0.032f), new Color(0.66f, 0.68f, 0.72f), local: true, removeCollider: true);
+            CreateBox(root.transform, "LogHeaderStripe", new Vector3(0f, 0.0195f, 0.085f), new Vector3(0.16f, 0.002f, 0.024f), new Color(0.14f, 0.32f, 0.56f), local: true, removeCollider: true);
 
+            // Real readable 3D WorldSpace text directly on the clipboard paper (large bold text readable even from Desk view!)
+            GameObject canvasGo = new GameObject("ClipboardPaperTextCanvas");
+            canvasGo.transform.SetParent(root.transform, false);
+            canvasGo.transform.localPosition = new Vector3(0f, 0.0205f, -0.012f);
+            canvasGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            Canvas c = canvasGo.AddComponent<Canvas>();
+            c.renderMode = RenderMode.WorldSpace;
+            RectTransform crt = canvasGo.GetComponent<RectTransform>();
+            crt.sizeDelta = new Vector2(360f, 470f);
+            crt.localScale = new Vector3(0.185f / 360f, 0.24f / 470f, 1f);
+
+            GameObject txtGo = new GameObject("LogText3D");
+            txtGo.transform.SetParent(canvasGo.transform, false);
+            RectTransform trt = txtGo.AddComponent<RectTransform>();
+            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
+            trt.offsetMin = new Vector2(14f, 10f); trt.offsetMax = new Vector2(-14f, -10f);
+
+            Text txt = txtGo.AddComponent<Text>();
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.fontSize = 36;
+            txt.lineSpacing = 1.15f;
+            txt.color = new Color(0.07f, 0.08f, 0.12f, 1f);
+            txt.alignment = TextAnchor.UpperLeft;
+            txt.supportRichText = true;
+            txt.raycastTarget = false;
+            txt.text =
+                "<color=#FFFFFF><b> MAIL LOG</b></color>\n\n" +
+                "<b>B-01:</b> Receipts\n\n" +
+                "<color=#A41414><b>B-02: MORETTI ★</b></color>\n\n" +
+                "<b>B-03:</b> Forms";
+
+            root.AddComponent<ClipboardPickupAnimator>();
             return root;
         }
 
@@ -828,6 +998,60 @@ namespace HealthFiles.EditorTools
                 combined.Encapsulate(renderers[i].bounds);
             }
             return combined;
+        }
+
+        /// <summary>
+        /// Computes an exact rotation-aware local-space BoxCollider wrapping EVERY Renderer child
+        /// of target (with generous padding and optional minimum clickable size).
+        /// </summary>
+        private static void AddAutoFitColliderAndInteractable(
+            GameObject target,
+            string id,
+            string label,
+            string focusViewpoint,
+            float padding = 0.03f,
+            Vector3? minLocalSize = null)
+        {
+            Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
+            bool hasBounds = false;
+            Bounds localBounds = new Bounds();
+
+            foreach (Renderer r in renderers)
+            {
+                if (r is MeshRenderer || r is SkinnedMeshRenderer)
+                {
+                    Bounds wb = r.bounds;
+                    Vector3 ext = wb.extents;
+                    Vector3 ctr = wb.center;
+                    for (int sx = -1; sx <= 1; sx += 2)
+                    for (int sy = -1; sy <= 1; sy += 2)
+                    for (int sz = -1; sz <= 1; sz += 2)
+                    {
+                        Vector3 worldCorner = ctr + new Vector3(ext.x * sx, ext.y * sy, ext.z * sz);
+                        Vector3 localCorner = target.transform.InverseTransformPoint(worldCorner);
+                        if (!hasBounds)
+                        {
+                            localBounds = new Bounds(localCorner, Vector3.zero);
+                            hasBounds = true;
+                        }
+                        else
+                        {
+                            localBounds.Encapsulate(localCorner);
+                        }
+                    }
+                }
+            }
+
+            Vector3 finalSize = hasBounds ? localBounds.size + Vector3.one * (padding * 2f) : new Vector3(0.25f, 0.25f, 0.25f);
+            Vector3 finalCenter = hasBounds ? localBounds.center : Vector3.zero;
+
+            if (minLocalSize.HasValue)
+            {
+                Vector3 m = minLocalSize.Value;
+                finalSize = new Vector3(Mathf.Max(finalSize.x, m.x), Mathf.Max(finalSize.y, m.y), Mathf.Max(finalSize.z, m.z));
+            }
+
+            AddCleanColliderAndInteractable(target, id, label, focusViewpoint, finalSize, finalCenter);
         }
 
         private static void AddCleanColliderAndInteractable(GameObject target, string id, string label, string focusViewpoint, Vector3 colliderSize, Vector3 colliderCenter)

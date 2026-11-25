@@ -23,6 +23,8 @@ namespace HealthFiles
         public event Action OnMailLogOpened;
         public event Action OnManualOpened;
         public event Action OnAlexLetterOpened;
+        public event Action<string> OnBookOpened; // "manual", "myths", "privacy", "coffee"
+        public event Action OnPrinterJamOpened;
         public event Action<string> OnObjectionSplash;
 
         private void Awake()
@@ -59,6 +61,18 @@ namespace HealthFiles
             {
                 case "bookshelf_manual":
                     HandleBookshelfClick();
+                    break;
+                case "book_easter_myths":
+                    SoundManager.Instance?.Play("paper_rustle", 0.8f);
+                    OnBookOpened?.Invoke("myths");
+                    break;
+                case "book_easter_privacy":
+                    SoundManager.Instance?.Play("paper_rustle", 0.8f);
+                    OnBookOpened?.Invoke("privacy");
+                    break;
+                case "book_easter_coffee":
+                    SoundManager.Instance?.Play("paper_rustle", 0.8f);
+                    OnBookOpened?.Invoke("coffee");
                     break;
                 case "desk_phone":
                     HandlePhoneClick();
@@ -111,7 +125,7 @@ namespace HealthFiles
                 SetState(MissionState.Alex_AnswerFirstCall);
                 NotifyStatus("Found the Investigation Manual (Source - Evidence - Context)! Now the phone is ringing with Case 01...");
             }
-            OnManualOpened?.Invoke();
+            OnBookOpened?.Invoke("manual");
         }
 
         private void HandlePhoneClick()
@@ -211,14 +225,8 @@ namespace HealthFiles
 
         private void HandlePrinterClick()
         {
-            if (currentState == MissionState.Daniel_Ready)
-            {
-                NotifyStatus("Printer output tray checked! Ready for WP5's Daniel link sheet.");
-            }
-            else
-            {
-                NotifyStatus("Office printer is idle (used in Case 03 — Daniel Conti).");
-            }
+            SoundManager.Instance?.Play("wrong_buzz", 0.45f);
+            OnPrinterJamOpened?.Invoke();
         }
 
         private void HandleEvidenceBoardClick()
