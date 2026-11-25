@@ -72,16 +72,25 @@ bool hasPolicy = EvidenceManager.Instance.HasEvidence("policy_42");
 // Read WP1 LLM persona line:
 string line = DialogueManager.Instance.GetLine("sofia", "intro");
 
-// Track DHLI Personalization score & get adaptive hint:
+// Track DHLI Personalization score, onboarding calibration, rank & adaptive hints:
+PersonalizationManager.Instance.ApplyOnboardingSelfCheck(relLevel, privLevel, navLevel); // 1=Low, 2=Med, 3=High
 PersonalizationManager.Instance.RecordCorrectAction(DhliDomain.Privacy, 15);
 PersonalizationManager.Instance.RecordMistake(DhliDomain.Privacy, 10);
+bool guided = PersonalizationManager.Instance.IsGuidedMode(DhliDomain.Privacy);
+string mode = PersonalizationManager.Instance.GetAssignedModeLabel(); // Guided / Balanced / Independent
+string rank = PersonalizationManager.Instance.GetInvestigatorRank(EvidenceManager.Instance.CollectedEvidence.Count);
 string tip = PersonalizationManager.Instance.GetAdaptiveHint(DhliDomain.Privacy);
+
+// Audio volume & mute controls (shared by Pause/Options menu and HUD):
+SoundManager.Instance.SetMasterVolume(0.8f);
+SoundManager.Instance.ToggleMute();
 
 // Move camera to a station (WP2):
 CameraViewpointController.Instance.MoveToViewpoint("Computer");
 
-// Advance shared mission state:
+// Advance shared mission state (and listen for Case 01 completion):
 MissionManager.Instance.SetState(MissionState.Daniel_Ready);
+MissionManager.Instance.OnCase01Completed += () => { /* Triggered when policy_42 is pinned */ };
 ```
 
 ---

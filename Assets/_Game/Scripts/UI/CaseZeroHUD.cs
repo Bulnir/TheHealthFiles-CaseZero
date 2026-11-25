@@ -22,21 +22,25 @@ namespace HealthFiles
     public class CaseZeroHUD : MonoBehaviour
     {
         private Font uiFont;
+        private Font headingFont;
+        private Font monoFont;
         private Sprite roundedSprite;
         private Sprite pillSprite;
         private readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>();
 
-        // Warm Editorial Paper Dossier Palette (60% Paper Base, 30% Manila Cards, 10% Burgundy/Sage Accents)
-        private static readonly Color PaperBase      = new Color(0.95f, 0.925f, 0.882f, 0.99f);
-        private static readonly Color PaperCard      = new Color(0.905f, 0.875f, 0.812f, 1f);
-        private static readonly Color PaperBtn       = new Color(0.855f, 0.815f, 0.738f, 1f);
-        private static readonly Color PaperBorder    = new Color(0.73f, 0.67f, 0.56f, 0.95f);
-        private static readonly Color InkPrimary     = new Color(0.13f, 0.15f, 0.18f, 1f);
-        private static readonly Color InkMuted       = new Color(0.36f, 0.38f, 0.41f, 1f);
-        private static readonly Color AccentBurgundy = new Color(0.50f, 0.16f, 0.17f, 1f);
-        private static readonly Color AccentSage     = new Color(0.18f, 0.39f, 0.32f, 1f);
-        private static readonly Color AccentOchre    = new Color(0.60f, 0.42f, 0.14f, 1f);
-        private static readonly Color PaperWhite     = new Color(0.97f, 0.95f, 0.91f, 1f);
+        // Rich Aged Parchment Dossier Palette (warmer, lower-glare, tactile game feel)
+        private static readonly Color PaperBase      = new Color(0.875f, 0.835f, 0.765f, 0.99f); // #DFD5C3 aged parchment
+        private static readonly Color PaperCard      = new Color(0.824f, 0.773f, 0.686f, 1f);    // #D2C5AE manila card
+        private static readonly Color PaperBtn       = new Color(0.765f, 0.706f, 0.612f, 1f);    // #C3B49C tactile button
+        private static readonly Color PaperBorder    = new Color(0.56f, 0.49f, 0.39f, 0.95f);    // #8F7D63 crisp archival rule
+        private static readonly Color InkPrimary     = new Color(0.11f, 0.12f, 0.14f, 1f);       // #1C1F24 deep ink
+        private static readonly Color InkMuted       = new Color(0.30f, 0.29f, 0.27f, 1f);       // #4D4A45 warm graphite
+        private static readonly Color AccentBurgundy = new Color(0.49f, 0.15f, 0.16f, 1f);       // #7D2629 wax-seal burgundy
+        private static readonly Color AccentSage     = new Color(0.17f, 0.37f, 0.30f, 1f);       // #2B5E4D archival sage
+        private static readonly Color AccentOchre    = new Color(0.58f, 0.39f, 0.12f, 1f);       // #94631F warm brass
+        private static readonly Color PaperWhite     = new Color(0.95f, 0.92f, 0.86f, 1f);       // #F2EBDB soft cream text
+        private static readonly Color MonitorBezel   = new Color(0.11f, 0.12f, 0.14f, 0.99f);    // #1C1F24 workstation OS bezel
+        private static readonly Color MonitorBar     = new Color(0.16f, 0.17f, 0.20f, 1f);       // #292B33 OS titlebar
 
         // Minimal HUD elements
         private Text objectiveText;
@@ -173,7 +177,11 @@ namespace HealthFiles
 
         private void Awake()
         {
-            uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            Font fallback = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            uiFont = LoadBestFont(new[] { "Segoe UI", "Calibri", "Helvetica Neue", "Arial" }, 14, fallback);
+            headingFont = LoadBestFont(new[] { "Georgia", "Palatino Linotype", "Cambria", "Times New Roman" }, 22, uiFont);
+            monoFont = LoadBestFont(new[] { "Consolas", "Courier New", "Menlo" }, 13, uiFont);
+
             roundedSprite = CreateRoundedSprite(128, 28);
             pillSprite = CreateRoundedSprite(64, 12);
             foreach (string key in new[] { "alex", "sofia", "daniel" })
@@ -182,6 +190,20 @@ namespace HealthFiles
                 if (tex != null) portraits[key] = tex;
             }
             BuildCanvasUI();
+        }
+
+        private static Font LoadBestFont(string[] candidates, int size, Font fallback)
+        {
+            try
+            {
+                Font f = Font.CreateDynamicFontFromOSFont(candidates, size);
+                if (f != null) return f;
+            }
+            catch
+            {
+                // Fall back safely on platforms without these OS fonts
+            }
+            return fallback;
         }
 
         private void Start()
@@ -572,7 +594,7 @@ namespace HealthFiles
 
             if (items.Count == 0)
             {
-                CreateText(inventoryListParent, "Empty", "No evidence collected yet.", 13, new Color(0.75f, 0.8f, 0.85f), TextAnchor.UpperLeft, false);
+                CreateText(inventoryListParent, "Empty", "No evidence collected yet.", 13, InkMuted, TextAnchor.UpperLeft, false);
                 return;
             }
 
@@ -582,14 +604,15 @@ namespace HealthFiles
                 Button btn = CreateButton(
                     inventoryListParent,
                     $"Inv_{item.id}",
-                    $"• {item.title}",
-                    new Color(0.18f, 0.28f, 0.42f, 0.96f),
+                    $"•  {item.title}",
+                    PaperBtn,
                     34f,
                     () =>
                     {
                         SoundManager.Instance?.Play("ui_click", 0.5f);
                         evidenceDetailText.text = $"<b>{captured.title}</b> ({captured.id})\nDomain: {captured.dhliDomain}\nSource: {captured.source}\n\n{captured.summary}";
-                    }
+                    },
+                    InkPrimary
                 );
                 btn.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
             }
@@ -599,6 +622,7 @@ namespace HealthFiles
         {
             CloseAllModals();
             phonePanel.SetActive(true);
+            AnimateModalPopIn(phonePanel);
             phoneSpeakerText.text = speaker;
             phoneFeedbackText.text = "";
 
@@ -619,17 +643,18 @@ namespace HealthFiles
 
             if (allowObjection && EvidenceManager.Instance != null)
             {
-                CreateText(objectionButtonContainer, "ObjHdr", "Choose Evidence Card to Present:", 13, new Color(1f, 0.88f, 0.4f), TextAnchor.MiddleLeft, false);
+                CreateText(objectionButtonContainer, "ObjHdr", "<b>PRESENT EVIDENCE:</b>", 13, AccentBurgundy, TextAnchor.MiddleLeft, false);
                 foreach (EvidenceItem item in EvidenceManager.Instance.CollectedEvidence)
                 {
                     EvidenceItem captured = item;
                     CreateButton(
                         objectionButtonContainer,
                         $"Present_{item.id}",
-                        $"OBJECTION! Present: {item.title}",
-                        new Color(0.76f, 0.20f, 0.16f, 1f),
+                        $"OBJECTION!  {item.title}",
+                        AccentBurgundy,
                         36f,
-                        () => OnPresentEvidenceClicked(captured.id)
+                        () => OnPresentEvidenceClicked(captured.id),
+                        PaperWhite
                     );
                 }
             }
@@ -705,13 +730,13 @@ namespace HealthFiles
             {
                 if (typewriterRoutine != null) StopCoroutine(typewriterRoutine);
                 typewriterRoutine = StartCoroutine(TypeTextRoutine(phoneBodyText, response));
-                phoneFeedbackText.color = new Color(0.45f, 1f, 0.55f);
-                phoneFeedbackText.text = "OBJECTION ACCEPTED! Claim challenged with verifiable evidence.";
+                phoneFeedbackText.color = AccentSage;
+                phoneFeedbackText.text = "<b>OBJECTION ACCEPTED!</b> Claim challenged with verifiable evidence.";
                 foreach (Transform child in objectionButtonContainer) Destroy(child.gameObject);
             }
             else
             {
-                phoneFeedbackText.color = new Color(1f, 0.72f, 0.35f);
+                phoneFeedbackText.color = AccentBurgundy;
                 phoneFeedbackText.text = $"{response}\n\n{hint}";
             }
         }
@@ -741,6 +766,7 @@ namespace HealthFiles
         {
             CloseAllModals();
             computerPanel.SetActive(true);
+            AnimateModalPopIn(computerPanel);
 
             bool hasLetter = EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence("letter_alex");
             if (hasLetter)
@@ -776,14 +802,14 @@ namespace HealthFiles
                 {
                     redFlagsFound[p.redFlagIndex] = true;
                     SoundManager.Instance?.Play("evidence_unlock", 0.55f);
-                    computerFeedbackText.color = new Color(0.45f, 1f, 0.55f);
+                    computerFeedbackText.color = AccentSage;
                     computerFeedbackText.text = "Flagged! That part of the blog is unsupported.";
                 }
             }
             else
             {
                 MissionManager.Instance?.RecordWrongBlogSelection();
-                computerFeedbackText.color = new Color(1f, 0.65f, 0.35f);
+                computerFeedbackText.color = AccentBurgundy;
                 computerFeedbackText.text = p.distractorHint;
             }
             UpdateBlogInspectionState();
@@ -799,44 +825,44 @@ namespace HealthFiles
                 BlogPassage p = blogPassages[i];
                 if (p.isRedFlag && redFlagsFound[p.redFlagIndex])
                 {
-                    passageLabels[i].text = "[FLAGGED] " + p.text;
-                    passageLabels[i].color = new Color(1f, 0.95f, 0.72f);
-                    passageBackgrounds[i].color = new Color(0.56f, 0.16f, 0.16f, 1f);
+                    passageLabels[i].text = "[FLAGGED]  " + p.text;
+                    passageLabels[i].color = PaperWhite;
+                    passageBackgrounds[i].color = AccentBurgundy;
                 }
                 else
                 {
                     passageLabels[i].text = p.text;
-                    passageLabels[i].color = Color.white;
-                    passageBackgrounds[i].color = new Color(0.16f, 0.21f, 0.28f, 0.96f);
+                    passageLabels[i].color = InkPrimary;
+                    passageBackgrounds[i].color = PaperBtn;
                 }
             }
 
             bool collected = EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence("blog_unverified");
             completeInspectionButton.interactable = (count == 3) && !collected;
             completeInspectionButton.GetComponentInChildren<Text>().text = collected
-                ? "Collected: Unverified Blog Claim (Close PC & Call Alex!)"
-                : (count == 3 ? "CREATE EVIDENCE CARD: Unverified Blog Claim" : $"Click the 3 unsupported weaknesses ({count}/3)");
+                ? "Collected: Unverified Blog Claim (Close PC & Call Alex)"
+                : (count == 3 ? "Create Evidence Card: Unverified Blog Claim" : $"Flag 3 unsupported claims ({count}/3)");
 
             if (computerModeBannerText != null && PersonalizationManager.Instance != null)
             {
                 var pm = PersonalizationManager.Instance;
                 if (pm.IsGuidedMode(DhliDomain.Reliability))
                 {
-                    computerModeBannerText.color = new Color(1f, 0.88f, 0.45f);
+                    computerModeBannerText.color = AccentBurgundy;
                     computerModeBannerText.text =
-                        "<b>[GUIDED SUPPORT ACTIVE]</b> Check for: (1) Extreme headline, (2) Anonymous author, (3) Missing proof/sources.";
+                        "<b>[GUIDED HINT]</b> Look for: (1) Extreme headline, (2) Anonymous author, (3) No proof/sources.";
                 }
                 else if (pm.reliabilityScore >= 70)
                 {
-                    computerModeBannerText.color = new Color(0.45f, 0.95f, 0.65f);
+                    computerModeBannerText.color = AccentSage;
                     computerModeBannerText.text =
-                        "<b>[INDEPENDENT ANALYST MODE]</b> No extra hints — spot all 3 unsupported blog weaknesses on your own!";
+                        "<b>[INDEPENDENT MODE]</b> No extra hints — spot all 3 unsupported blog claims on your own.";
                 }
                 else
                 {
-                    computerModeBannerText.color = new Color(0.65f, 0.88f, 1f);
+                    computerModeBannerText.color = InkMuted;
                     computerModeBannerText.text =
-                        "<b>[BALANCED MODE]</b> Compare the blog against Privacy Policy Section 4.2 to find the 3 unsupported claims.";
+                        "<b>[BALANCED MODE]</b> Compare the blog against Section 4.2 to flag the 3 unsupported claims.";
                 }
             }
         }
@@ -852,6 +878,7 @@ namespace HealthFiles
                 "• Drawer B-03 (Bottom)  — Blank Forms\n\n" +
                 "<i>Look left to the Archive Cabinet, slide open Drawer B-02, and click Alex's yellow envelope!</i>";
             docModalPanel.SetActive(true);
+            AnimateModalPopIn(docModalPanel);
         }
 
         private void OpenManualModal()
@@ -865,6 +892,7 @@ namespace HealthFiles
                 "3. <b>CONTEXT:</b> Were dates or policy clauses twisted?\n\n" +
                 "<i>Saved to your Evidence drawer!</i>";
             docModalPanel.SetActive(true);
+            AnimateModalPopIn(docModalPanel);
         }
 
         private void OpenAlexLetterModal()
@@ -877,6 +905,7 @@ namespace HealthFiles
                 "Blog URL unlocked on your Office Computer:\n<i>http://truth-health-watch.blog/vitapulse-exposed</i>\n\n" +
                 "<i>Click your Computer Monitor to compare the blog with VitaPulse's Privacy Policy!</i>";
             docModalPanel.SetActive(true);
+            AnimateModalPopIn(docModalPanel);
         }
 
         private void BuildCanvasUI()
@@ -1037,36 +1066,42 @@ namespace HealthFiles
 
         private void BuildEvidenceDrawer(Transform parent)
         {
-            RectTransform panel = CreatePanel(parent, "EvidenceDrawer", new Color(0.07f, 0.10f, 0.16f, 0.95f), raycast: true);
+            RectTransform panel = CreatePanel(parent, "EvidenceDrawer", PaperBase, raycast: true);
+            AddSubtleBorder(panel.gameObject, PaperBorder);
             panel.anchorMin = new Vector2(1f, 1f);
             panel.anchorMax = new Vector2(1f, 1f);
             panel.pivot = new Vector2(1f, 1f);
-            panel.sizeDelta = new Vector2(310f, 440f);
+            panel.sizeDelta = new Vector2(320f, 440f);
             panel.anchoredPosition = new Vector2(-14f, -58f);
 
             VerticalLayoutGroup lay = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-            lay.padding = new RectOffset(12, 12, 10, 10);
+            lay.padding = new RectOffset(14, 14, 12, 12);
             lay.spacing = 6;
             lay.childControlHeight = false;
             lay.childForceExpandHeight = false;
 
-            Text hdr = CreateText(panel, "Hdr", "COLLECTED EVIDENCE", 14, new Color(0.65f, 0.88f, 1f), TextAnchor.MiddleLeft, false);
+            Text hdr = CreateText(panel, "Hdr", "COLLECTED EVIDENCE", 14, AccentBurgundy, TextAnchor.MiddleLeft, false);
             hdr.fontStyle = FontStyle.Bold;
             hdr.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 22f);
 
+            CreateDividerLine(panel, PaperBorder);
+
             GameObject listObj = new GameObject("List");
             listObj.transform.SetParent(panel, false);
-            listObj.AddComponent<RectTransform>().sizeDelta = new Vector2(286f, 220f);
+            listObj.AddComponent<RectTransform>().sizeDelta = new Vector2(292f, 200f);
             VerticalLayoutGroup lLay = listObj.AddComponent<VerticalLayoutGroup>();
-            lLay.spacing = 4;
+            lLay.spacing = 5;
             lLay.childControlHeight = false;
             lLay.childForceExpandHeight = false;
             inventoryListParent = listObj.transform;
 
-            evidenceDetailText = CreateText(panel, "Detail", "Click any card above to inspect.", 12, new Color(0.9f, 0.94f, 0.98f), TextAnchor.UpperLeft, false);
-            evidenceDetailText.GetComponent<RectTransform>().sizeDelta = new Vector2(286f, 130f);
+            RectTransform detailBox = CreatePanel(panel, "DetailBox", PaperCard, raycast: false);
+            AddSubtleBorder(detailBox.gameObject, PaperBorder);
+            detailBox.sizeDelta = new Vector2(292f, 136f);
+            evidenceDetailText = CreateText(detailBox, "Detail", "Select a card above to inspect.", 12, InkPrimary, TextAnchor.UpperLeft, false);
+            SetFill(evidenceDetailText.GetComponent<RectTransform>(), 10f, 8f);
 
-            CreateButton(panel, "CloseInv", "Close", new Color(0.26f, 0.32f, 0.42f, 1f), 30f, () => inventoryDrawer.SetActive(false));
+            CreateButton(panel, "CloseInv", "Close", PaperBtn, 32f, () => inventoryDrawer.SetActive(false), InkPrimary);
 
             inventoryDrawer = panel.gameObject;
             inventoryDrawer.SetActive(false);
@@ -1503,22 +1538,24 @@ namespace HealthFiles
 
         private void BuildPhoneModal(Transform parent)
         {
-            RectTransform modal = CreatePanel(parent, "PhoneModal", new Color(0.06f, 0.09f, 0.15f, 0.97f), raycast: true);
-            AddSubtleBorder(modal.gameObject, new Color(0.95f, 0.80f, 0.32f, 0.65f));
+            RectTransform modal = CreatePanel(parent, "PhoneModal", PaperBase, raycast: true);
+            AddSubtleBorder(modal.gameObject, PaperBorder);
             modal.anchorMin = new Vector2(0.16f, 0.15f);
             modal.anchorMax = new Vector2(0.84f, 0.85f);
             modal.offsetMin = Vector2.zero;
             modal.offsetMax = Vector2.zero;
 
             VerticalLayoutGroup lay = modal.gameObject.AddComponent<VerticalLayoutGroup>();
-            lay.padding = new RectOffset(22, 22, 18, 18);
+            lay.padding = new RectOffset(24, 24, 18, 18);
             lay.spacing = 8;
             lay.childControlHeight = false;
             lay.childForceExpandHeight = false;
 
-            phoneSpeakerText = CreateText(modal, "Speaker", "TELEPHONE", 19, new Color(1f, 0.88f, 0.38f), TextAnchor.MiddleLeft, false);
+            phoneSpeakerText = CreateText(modal, "Speaker", "TELEPHONE", 19, AccentBurgundy, TextAnchor.MiddleLeft, false);
             phoneSpeakerText.fontStyle = FontStyle.Bold;
             phoneSpeakerText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 28f);
+
+            CreateDividerLine(modal, PaperBorder);
 
             GameObject row = new GameObject("Row");
             row.transform.SetParent(modal, false);
@@ -1530,7 +1567,8 @@ namespace HealthFiles
             rLay.childControlHeight = false;
             rLay.childForceExpandHeight = false;
 
-            RectTransform frame = CreatePanel(row.transform, "PortraitFrame", new Color(0.22f, 0.32f, 0.46f, 1f), raycast: false);
+            RectTransform frame = CreatePanel(row.transform, "PortraitFrame", PaperCard, raycast: false);
+            AddSubtleBorder(frame.gameObject, PaperBorder);
             frame.sizeDelta = new Vector2(134f, 134f);
             LayoutElement fLe = frame.gameObject.AddComponent<LayoutElement>();
             fLe.minWidth = 134f;
@@ -1543,7 +1581,8 @@ namespace HealthFiles
             phonePortraitFrame = frame.gameObject;
 
             // Clickable dialogue box (click anywhere on dialogue to skip typewriter instantly!)
-            RectTransform bodyBox = CreatePanel(row.transform, "DialogueClickBox", new Color(0.09f, 0.13f, 0.21f, 0.85f), raycast: true);
+            RectTransform bodyBox = CreatePanel(row.transform, "DialogueClickBox", PaperCard, raycast: true);
+            AddSubtleBorder(bodyBox.gameObject, PaperBorder);
             bodyBox.sizeDelta = new Vector2(0f, 142f);
             LayoutElement bLe = bodyBox.gameObject.AddComponent<LayoutElement>();
             bLe.minWidth = 240f;
@@ -1552,31 +1591,31 @@ namespace HealthFiles
             skipClickBtn.targetGraphic = bodyBox.GetComponent<Image>();
             skipClickBtn.onClick.AddListener(CompleteTypewriterImmediately);
 
-            phoneBodyText = CreateText(bodyBox, "Body", "", 15, Color.white, TextAnchor.UpperLeft, false);
+            phoneBodyText = CreateText(bodyBox, "Body", "", 15, InkPrimary, TextAnchor.UpperLeft, false);
             SetFill(phoneBodyText.GetComponent<RectTransform>(), 12f, 10f);
 
-            phoneSkipHintText = CreateText(bodyBox, "SkipHint", "Click text to reveal instantly »", 11, new Color(0.68f, 0.82f, 0.96f, 0.85f), TextAnchor.LowerRight, false);
+            phoneSkipHintText = CreateText(bodyBox, "SkipHint", "Click to reveal »", 11, InkMuted, TextAnchor.LowerRight, false);
             phoneSkipHintText.fontStyle = FontStyle.Italic;
             SetFill(phoneSkipHintText.GetComponent<RectTransform>(), 10f, 6f);
             phoneSkipHintText.gameObject.SetActive(false);
 
-            phoneFeedbackText = CreateText(modal, "Feedback", "", 13, new Color(0.45f, 1f, 0.55f), TextAnchor.UpperLeft, false);
-            phoneFeedbackText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 60f);
+            phoneFeedbackText = CreateText(modal, "Feedback", "", 13, AccentSage, TextAnchor.UpperLeft, false);
+            phoneFeedbackText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 56f);
 
             GameObject box = new GameObject("ObjBtns");
             box.transform.SetParent(modal, false);
-            box.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 145f);
+            box.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 142f);
             VerticalLayoutGroup bLay = box.AddComponent<VerticalLayoutGroup>();
             bLay.spacing = 5;
             bLay.childControlHeight = false;
             bLay.childForceExpandHeight = false;
             objectionButtonContainer = box.transform;
 
-            CreateButton(modal, "HangUpBtn", "Hang Up / Close", new Color(0.26f, 0.32f, 0.42f, 1f), 36f, () =>
+            CreateButton(modal, "HangUpBtn", "Hang Up", PaperBtn, 36f, () =>
             {
                 SoundManager.Instance?.Play("ui_click", 0.5f);
                 phonePanel.SetActive(false);
-            });
+            }, InkPrimary);
 
             phonePanel = modal.gameObject;
             phonePanel.SetActive(false);
@@ -1584,9 +1623,11 @@ namespace HealthFiles
 
         private void BuildComputerDesktopModal(Transform parent)
         {
-            RectTransform modal = CreatePanel(parent, "ComputerDesktopModal", new Color(0.05f, 0.08f, 0.13f, 0.98f), raycast: true);
-            modal.anchorMin = new Vector2(0.08f, 0.10f);
-            modal.anchorMax = new Vector2(0.92f, 0.90f);
+            // Sleek dark charcoal monitor bezel framing warm archival browser pages
+            RectTransform modal = CreatePanel(parent, "ComputerDesktopModal", MonitorBezel, raycast: true);
+            AddSubtleBorder(modal.gameObject, new Color(0.32f, 0.34f, 0.38f, 0.9f));
+            modal.anchorMin = new Vector2(0.07f, 0.08f);
+            modal.anchorMax = new Vector2(0.93f, 0.92f);
             modal.offsetMin = Vector2.zero;
             modal.offsetMax = Vector2.zero;
 
@@ -1596,7 +1637,7 @@ namespace HealthFiles
             rootLay.childControlHeight = false;
             rootLay.childForceExpandHeight = false;
 
-            // Top OS Window Bar with Tab Switchers + Close
+            // Top Workstation OS Title + Tab Bar
             GameObject topRow = new GameObject("OSTabs");
             topRow.transform.SetParent(modal, false);
             topRow.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 36f);
@@ -1604,56 +1645,71 @@ namespace HealthFiles
             tLay.spacing = 8;
             tLay.childControlWidth = true;
             tLay.childForceExpandWidth = true;
+            tLay.childControlHeight = true;
+            tLay.childForceExpandHeight = true;
 
-            CreateButton(topRow.transform, "TabNews", "1. Viral News Feed (VitaPulse)", new Color(0.18f, 0.34f, 0.52f, 1f), 34f, () => ShowComputerTab(false));
-            CreateButton(topRow.transform, "TabInspect", "2. Case 01: Blog vs Privacy Policy", new Color(0.22f, 0.44f, 0.34f, 1f), 34f, () => ShowComputerTab(true));
-            CreateButton(topRow.transform, "CloseOS", "Close Computer [X]", new Color(0.55f, 0.20f, 0.20f, 1f), 34f, () =>
+            Button tab1 = CreateButton(topRow.transform, "TabNews", "1. Viral News Feed", MonitorBar, 34f, () => ShowComputerTab(false), PaperWhite);
+            tab1.GetComponent<LayoutElement>().flexibleWidth = 1.4f;
+            Button tab2 = CreateButton(topRow.transform, "TabInspect", "2. Blog vs Privacy Policy", AccentSage, 34f, () => ShowComputerTab(true), PaperWhite);
+            tab2.GetComponent<LayoutElement>().flexibleWidth = 1.6f;
+            Button closePc = CreateButton(topRow.transform, "CloseOS", "Close [X]", AccentBurgundy, 34f, () =>
             {
                 SoundManager.Instance?.Play("ui_click", 0.5f);
                 computerPanel.SetActive(false);
-            });
+            }, PaperWhite);
+            closePc.GetComponent<LayoutElement>().flexibleWidth = 0.7f;
 
-            // TAB 1: Viral News Feed (always accessible!)
-            RectTransform newsTab = CreatePanel(modal, "NewsTab", new Color(0.09f, 0.13f, 0.20f, 0.96f), raycast: false);
+            // Browser Address Bar (Consolas monospace)
+            RectTransform urlBar = CreatePanel(modal, "UrlBar", MonitorBar, raycast: false);
+            urlBar.sizeDelta = new Vector2(0f, 24f);
+            Text urlTxt = CreateText(urlBar, "UrlTxt", "  https://dhio-workstation.local/vitapulse/evidence-audit", 12, new Color(0.76f, 0.78f, 0.80f), TextAnchor.MiddleLeft, false);
+            if (monoFont != null) urlTxt.font = monoFont;
+            SetFill(urlTxt.GetComponent<RectTransform>(), 10f, 2f);
+
+            // TAB 1: Viral News Feed (warm archival browser page)
+            RectTransform newsTab = CreatePanel(modal, "NewsTab", PaperBase, raycast: false);
+            AddSubtleBorder(newsTab.gameObject, PaperBorder);
             newsTab.sizeDelta = new Vector2(0f, 470f);
             VerticalLayoutGroup nLay = newsTab.gameObject.AddComponent<VerticalLayoutGroup>();
-            nLay.padding = new RectOffset(22, 22, 18, 18);
+            nLay.padding = new RectOffset(24, 24, 20, 20);
             nLay.spacing = 12;
             CreateText(newsTab, "NewsBody",
-                "<b>VITAPULSE — TRENDING HEALTH NOTIFICATIONS</b>\n\n" +
-                "•  <b>[BREAKING]</b> \"VitaPulse Can Detect Serious Diseases Early!\"\n" +
-                "•  <b>[SOCIAL]</b> \"Millions Download the New Viral Health App!\"\n" +
-                "•  <b>[BLOG]</b> \"Is VitaPulse Secretly Selling Everyone's Health Data?\"\n\n" +
-                "<b>Investigator Workstation Status:</b>\n" +
-                "• Case 01 (Alex Moretti): Open Tab 2 once you collect Alex's Letter from Filing Cabinet Drawer B-02.\n" +
-                "• Case 02 (Sofia Romano — WP4): Social Media & Permission Panel plug-in.\n" +
-                "• Case 03 (Daniel Conti — WP5): Verified Official Health Portal plug-in.",
-                15, Color.white, TextAnchor.UpperLeft, false);
+                "<b><color=#7D2629>VITAPULSE — TRENDING HEALTH ALERTS</color></b>\n\n" +
+                "•  <b>[BREAKING]</b>  \"VitaPulse Can Detect Serious Diseases Early!\"\n" +
+                "•  <b>[SOCIAL]</b>  \"Millions Download the New Viral Health App!\"\n" +
+                "•  <b>[BLOG]</b>  \"Is VitaPulse Secretly Selling Everyone's Health Data?\"\n\n" +
+                "<b>Investigator Workstation Modules:</b>\n" +
+                "•  <b>Case 01 (Alex):</b> Open Tab 2 after collecting Alex's Letter from Drawer B-02.\n" +
+                "•  <b>Case 02 (Sofia — WP4):</b> Social Media & App Permission Audit.\n" +
+                "•  <b>Case 03 (Daniel — WP5):</b> Verified Official Health Portal.",
+                14, InkPrimary, TextAnchor.UpperLeft, false);
             pcNewsTabContent = newsTab.gameObject;
 
-            // TAB 2: Case 01 Blog vs Privacy Policy Inspector
-            GameObject inspTab = new GameObject("InspectorTab");
-            inspTab.transform.SetParent(modal, false);
-            inspTab.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 480f);
-            VerticalLayoutGroup iRootLay = inspTab.AddComponent<VerticalLayoutGroup>();
+            // TAB 2: Case 01 Blog vs Privacy Policy Inspector (warm parchment document viewport)
+            RectTransform inspWrap = CreatePanel(modal, "InspectorTab", PaperBase, raycast: false);
+            AddSubtleBorder(inspWrap.gameObject, PaperBorder);
+            inspWrap.sizeDelta = new Vector2(0f, 480f);
+            VerticalLayoutGroup iRootLay = inspWrap.gameObject.AddComponent<VerticalLayoutGroup>();
+            iRootLay.padding = new RectOffset(14, 14, 12, 12);
             iRootLay.spacing = 8;
             iRootLay.childControlHeight = false;
             iRootLay.childForceExpandHeight = false;
 
-            RectTransform lockedBox = CreatePanel(inspTab.transform, "LockedNotice", new Color(0.14f, 0.12f, 0.10f, 0.96f), raycast: false);
+            RectTransform lockedBox = CreatePanel(inspWrap, "LockedNotice", PaperCard, raycast: false);
+            AddSubtleBorder(lockedBox.gameObject, PaperBorder);
             lockedBox.sizeDelta = new Vector2(0f, 180f);
             Text lockTxt = CreateText(lockedBox, "LockTxt",
-                "<b>BLOG URL NOT UNLOCKED YET</b>\n\n" +
-                "1. Answer the Office Phone (Supervisor -> Investigation Manual -> Alex Moretti).\n" +
+                "<b><color=#7D2629>BLOG URL LOCKED</color></b>\n\n" +
+                "1. Answer the Office Phone (Supervisor → Manual → Alex).\n" +
                 "2. Check the Mail Delivery Log on your desk.\n" +
-                "3. Slide open Archive Cabinet Drawer B-02 and collect Alex's Yellow Envelope!",
-                15, new Color(1f, 0.88f, 0.48f), TextAnchor.MiddleCenter, false);
+                "3. Open Cabinet Drawer B-02 and collect Alex's Yellow Envelope.",
+                14, InkPrimary, TextAnchor.MiddleCenter, false);
             SetFill(lockTxt.GetComponent<RectTransform>(), 20, 14);
             pcInspectorLockedNotice = lockedBox.gameObject;
 
             GameObject gameArea = new GameObject("GameArea");
-            gameArea.transform.SetParent(inspTab.transform, false);
-            gameArea.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 470f);
+            gameArea.transform.SetParent(inspWrap, false);
+            gameArea.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 454f);
             VerticalLayoutGroup gLay = gameArea.AddComponent<VerticalLayoutGroup>();
             gLay.spacing = 8;
             gLay.childControlHeight = false;
@@ -1661,26 +1717,29 @@ namespace HealthFiles
 
             GameObject cols = new GameObject("Columns");
             cols.transform.SetParent(gameArea.transform, false);
-            cols.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 365f);
+            cols.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 355f);
             HorizontalLayoutGroup cLay = cols.AddComponent<HorizontalLayoutGroup>();
             cLay.spacing = 12;
             cLay.childControlWidth = true;
             cLay.childForceExpandWidth = true;
+            cLay.childControlHeight = true;
+            cLay.childForceExpandHeight = true;
 
-            RectTransform leftCol = CreatePanel(cols.transform, "BlogCol", new Color(0.14f, 0.09f, 0.11f, 0.96f), raycast: true);
+            RectTransform leftCol = CreatePanel(cols.transform, "BlogCol", PaperCard, raycast: true);
+            AddSubtleBorder(leftCol.gameObject, PaperBorder);
             VerticalLayoutGroup lLay = leftCol.gameObject.AddComponent<VerticalLayoutGroup>();
             lLay.padding = new RectOffset(10, 10, 8, 8);
             lLay.spacing = 6;
             lLay.childControlHeight = false;
             lLay.childForceExpandHeight = false;
 
-            Text bHdr = CreateText(leftCol, "BHdr", "<b>VIRAL BLOG POST — Click the 3 Unsupported Claims!</b>", 13, new Color(1f, 0.72f, 0.72f), TextAnchor.MiddleLeft, false);
+            Text bHdr = CreateText(leftCol, "BHdr", "<b><color=#7D2629>VIRAL BLOG POST — Flag 3 Unsupported Claims</color></b>", 13, AccentBurgundy, TextAnchor.MiddleLeft, false);
             bHdr.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 22f);
 
             for (int i = 0; i < blogPassages.Length; i++)
             {
                 int idx = i;
-                Button pBtn = CreateButton(leftCol, $"Passage_{i}", blogPassages[i].text, new Color(0.16f, 0.21f, 0.28f, 0.96f), 48f, () => OnBlogPassageClicked(idx));
+                Button pBtn = CreateButton(leftCol, $"Passage_{i}", blogPassages[i].text, PaperBtn, 46f, () => OnBlogPassageClicked(idx), InkPrimary);
                 Text t = pBtn.GetComponentInChildren<Text>();
                 t.alignment = TextAnchor.MiddleLeft;
                 t.fontSize = 12;
@@ -1688,7 +1747,8 @@ namespace HealthFiles
                 passageBackgrounds[i] = pBtn.GetComponent<Image>();
             }
 
-            RectTransform rightCol = CreatePanel(cols.transform, "PolicyCol", new Color(0.09f, 0.15f, 0.22f, 0.96f), raycast: false);
+            RectTransform rightCol = CreatePanel(cols.transform, "PolicyCol", PaperCard, raycast: false);
+            AddSubtleBorder(rightCol.gameObject, PaperBorder);
             VerticalLayoutGroup rLay = rightCol.gameObject.AddComponent<VerticalLayoutGroup>();
             rLay.padding = new RectOffset(14, 14, 12, 12);
             rLay.spacing = 10;
@@ -1696,32 +1756,32 @@ namespace HealthFiles
             rLay.childForceExpandHeight = false;
 
             Text polTxt = CreateText(rightCol, "PolTxt",
-                "<b>VITAPULSE PRIVACY POLICY — SECTION 4.2</b>\n\n" +
+                "<b><color=#2B5E4D>VITAPULSE PRIVACY POLICY — SECTION 4.2</color></b>\n\n" +
                 "\"Some user information may be shared with third-party partners to operate and improve services.\"\n\n" +
-                "<b>Investigator Check:</b>\n" +
-                "• This clause raises a real privacy question.\n" +
-                "• However, it does NOT prove a secret sale of ALL medical records.\n\n" +
-                "<i>Click ONLY the 3 unsupported weaknesses in the blog on the left!</i>",
-                14, new Color(0.88f, 0.96f, 1f), TextAnchor.UpperLeft, false);
-            polTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 240f);
+                "<b>Investigator Note:</b>\n" +
+                "•  This clause raises a real privacy question.\n" +
+                "•  However, it does NOT prove a secret sale of ALL medical records.\n\n" +
+                "<i>Flag ONLY the 3 unsupported weaknesses on the left.</i>",
+                13, InkPrimary, TextAnchor.UpperLeft, false);
+            polTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 232f);
 
-            RectTransform modeBox = CreatePanel(rightCol, "ModeHintBox", new Color(0.07f, 0.11f, 0.17f, 0.95f), raycast: false);
-            AddSubtleBorder(modeBox.gameObject, new Color(0.32f, 0.62f, 0.80f, 0.6f));
-            modeBox.sizeDelta = new Vector2(0f, 72f);
-            computerModeBannerText = CreateText(modeBox, "ModeHintTxt", "", 12, new Color(0.65f, 0.88f, 1f), TextAnchor.MiddleLeft, false);
+            RectTransform modeBox = CreatePanel(rightCol, "ModeHintBox", PaperBase, raycast: false);
+            AddSubtleBorder(modeBox.gameObject, PaperBorder);
+            modeBox.sizeDelta = new Vector2(0f, 70f);
+            computerModeBannerText = CreateText(modeBox, "ModeHintTxt", "", 12, InkPrimary, TextAnchor.MiddleLeft, false);
             SetFill(computerModeBannerText.GetComponent<RectTransform>(), 10f, 6f);
 
-            computerFeedbackText = CreateText(gameArea.transform, "PCFb", "Compare both documents and click the 3 unsupported blog weaknesses.", 13, new Color(1f, 0.9f, 0.48f), TextAnchor.MiddleLeft, false);
-            computerFeedbackText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 34f);
+            computerFeedbackText = CreateText(gameArea.transform, "PCFb", "Compare both documents and flag the 3 unsupported claims.", 13, InkMuted, TextAnchor.MiddleLeft, false);
+            computerFeedbackText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 30f);
 
-            completeInspectionButton = CreateButton(gameArea.transform, "StampBtn", "Click the 3 unsupported weaknesses (0/3)", new Color(0.15f, 0.56f, 0.34f, 1f), 40f, () =>
+            completeInspectionButton = CreateButton(gameArea.transform, "StampBtn", "Flag 3 unsupported claims (0/3)", AccentSage, 40f, () =>
             {
                 MissionManager.Instance?.CompleteAlexBlogInspection();
                 UpdateBlogInspectionState();
-            });
+            }, PaperWhite);
 
             pcInspectorGameArea = gameArea;
-            pcInspectorTabContent = inspTab;
+            pcInspectorTabContent = inspWrap.gameObject;
 
             computerPanel = modal.gameObject;
             computerPanel.SetActive(false);
@@ -1729,30 +1789,33 @@ namespace HealthFiles
 
         private void BuildDocModal(Transform parent)
         {
-            RectTransform modal = CreatePanel(parent, "DocModal", new Color(0.07f, 0.10f, 0.16f, 0.96f), raycast: true);
+            RectTransform modal = CreatePanel(parent, "DocModal", PaperBase, raycast: true);
+            AddSubtleBorder(modal.gameObject, PaperBorder);
             modal.anchorMin = new Vector2(0.22f, 0.24f);
             modal.anchorMax = new Vector2(0.78f, 0.76f);
             modal.offsetMin = Vector2.zero;
             modal.offsetMax = Vector2.zero;
 
             VerticalLayoutGroup lay = modal.gameObject.AddComponent<VerticalLayoutGroup>();
-            lay.padding = new RectOffset(24, 24, 20, 20);
+            lay.padding = new RectOffset(28, 28, 22, 22);
             lay.spacing = 12;
             lay.childControlHeight = false;
             lay.childForceExpandHeight = false;
 
-            docModalTitle = CreateText(modal, "T", "DOCUMENT", 19, new Color(1f, 0.88f, 0.40f), TextAnchor.MiddleLeft, false);
+            docModalTitle = CreateText(modal, "T", "DOCUMENT", 19, AccentBurgundy, TextAnchor.MiddleLeft, false);
             docModalTitle.fontStyle = FontStyle.Bold;
             docModalTitle.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 30f);
 
-            docModalBody = CreateText(modal, "B", "", 15, Color.white, TextAnchor.UpperLeft, false);
-            docModalBody.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 220f);
+            CreateDividerLine(modal, PaperBorder);
 
-            CreateButton(modal, "CloseDoc", "Close", new Color(0.26f, 0.32f, 0.42f, 1f), 38f, () =>
+            docModalBody = CreateText(modal, "B", "", 15, InkPrimary, TextAnchor.UpperLeft, false);
+            docModalBody.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 205f);
+
+            CreateButton(modal, "CloseDoc", "Close", PaperBtn, 38f, () =>
             {
                 SoundManager.Instance?.Play("ui_click", 0.5f);
                 docModalPanel.SetActive(false);
-            });
+            }, InkPrimary);
 
             docModalPanel = modal.gameObject;
             docModalPanel.SetActive(false);
@@ -2139,7 +2202,7 @@ namespace HealthFiles
             GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
             Text txt = go.AddComponent<Text>();
-            txt.font = uiFont;
+            txt.font = (fontSize >= 18 && headingFont != null) ? headingFont : uiFont;
             txt.text = content;
             txt.fontSize = fontSize;
             txt.color = color;
