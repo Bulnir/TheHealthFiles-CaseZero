@@ -980,19 +980,8 @@ namespace HealthFiles
 
         private static void EnhanceAlexEnvelopeClickability()
         {
-            GameObject env = GameObject.Find("AlexHiddenEnvelope");
-            if (env == null) return;
-
-            // Lift the yellow envelope slightly higher & tilt it toward the player so it peeks clearly out of Drawer B-02
-            env.transform.localPosition = new Vector3(0.08f, -0.045f, 0f);
-            env.transform.localRotation = Quaternion.Euler(0f, 8f, -14f);
-
-            BoxCollider col = env.GetComponent<BoxCollider>();
-            if (col != null)
-            {
-                col.size = new Vector3(0.48f, 0.28f, 0.52f);
-                col.center = new Vector3(0.04f, 0.08f, 0f);
-            }
+            // WP2 now provides sculpted upright filing folders + dedicated VP_Drawer2 camera;
+            // keep sculpted envelope transform untouched so WP2 art stays 100% aligned.
         }
 
         private void RefreshBookSpread()
