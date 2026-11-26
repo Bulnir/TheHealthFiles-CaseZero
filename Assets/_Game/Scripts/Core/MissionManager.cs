@@ -88,7 +88,12 @@ namespace HealthFiles
                 case "cabinet_drawer_1":
                 case "cabinet_drawer_2":
                 case "cabinet_drawer_3":
-                    // Handled visually by SlidingDrawer; nothing else required here.
+                case "desk_lamp":
+                case "desk_coffee":
+                case "office_water_cooler":
+                case "desk_trash_can":
+                case "office_window":
+                    // Handled visually & audibly by WP2 SlidingDrawer / OfficePropInteractions.
                     break;
                 case "desk_computer":
                     HandleComputerClick();

@@ -21,6 +21,9 @@ namespace HealthFiles
         [Tooltip("Optional: Automatically move camera to this viewpoint ID when clicked.")]
         public string focusViewpointId = "";
 
+        [Tooltip("Optional: Only allow hovering/clicking when the camera is at this viewpoint ID (e.g. 'Desk', 'Bookshelf', 'Cabinet'). Leave empty for any.")]
+        public string requiredViewpointId = "";
+
         [Header("Visual Hover Feedback")]
         [SerializeField] private Color hoverTint = new Color(1f, 0.85f, 0.35f, 1f);
 

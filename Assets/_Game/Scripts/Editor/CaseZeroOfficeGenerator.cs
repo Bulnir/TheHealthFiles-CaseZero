@@ -104,27 +104,55 @@ namespace HealthFiles.EditorTools
                 "desk_computer",
                 "Office Computer (Click to Zoom Into HealthOS)",
                 "Computer",
-                padding: 0.02f
+                padding: 0.004f,
+                requiredViewpoint: "Desk"
             );
             Vector3 monitorScreenCenter = AttachWorldSpaceMonitorOS(computerStation, monitorClickable.GetComponent<BoxCollider>());
 
-            // PC Tower standing cleanly ON THE RIGHT CORNER OF THE DESK (visible while seated, with glowing green LED & click interaction!)
+            // PC Tower standing cleanly ON THE RIGHT CORNER OF THE DESK (exact mesh-fit hitbox!)
             GameObject pcTower = PlacePrefabClean(roomRoot.transform, "PCTower", P_PCCase, new Vector3(0.84f, deskTopY, 1.50f), 0.40f, 102f);
             CreateBox(pcTower.transform, "PC_PowerLED", new Vector3(0.105f, 0.34f, -0.04f), new Vector3(0.012f, 0.012f, 0.024f), new Color(0.22f, 0.96f, 0.42f), local: true, removeCollider: true);
-            AddAutoFitColliderAndInteractable(pcTower, "desk_pc_tower", "Workstation PC Tower (Check Security Status)", "Desk", padding: 0.03f);
+            AddAutoFitColliderAndInteractable(pcTower, "desk_pc_tower", "Workstation PC Tower (Check Security Status)", "Desk", padding: 0.004f, requiredViewpoint: "Desk");
 
-            // 5. Interactable: Sleek Modern Office IP Telephone (angled toward player, real 21cm size!)
+            // 5. Interactable: Sleek Modern Office IP Telephone (angled toward player, exact mesh-fit hitbox!)
             GameObject phone = BuildModernOfficeIPPhone(roomRoot.transform, new Vector3(-0.64f, deskTopY, 1.24f));
             phone.AddComponent<RingingPhoneEffect>();
-            AddAutoFitColliderAndInteractable(phone, "desk_phone", "Office IP Telephone (Answer / Call Personas)", "Desk", padding: 0.035f);
+            AddAutoFitColliderAndInteractable(phone, "desk_phone", "Office IP Telephone (Answer / Call Personas)", "Desk", padding: 0.004f, requiredViewpoint: "Desk");
 
-            // 6. Interactable: Mail Delivery Log Clipboard (A4 proportions, readable 3D text right on the desk!)
+            // 6. Interactable: Mail Delivery Log Clipboard (exact mesh-fit hitbox!)
             GameObject mailLog = BuildMailLogClipboard(roomRoot.transform, new Vector3(0.54f, deskTopY, 1.12f));
-            AddAutoFitColliderAndInteractable(mailLog, "desk_mail_log", "Mail Delivery Log (Click to Pick Up & Read)", "Desk", padding: 0.03f, minLocalSize: new Vector3(0.24f, 0.07f, 0.32f));
+            AddAutoFitColliderAndInteractable(mailLog, "desk_mail_log", "Mail Delivery Log (Click to Pick Up & Read)", "Desk", padding: 0.004f, minLocalSize: new Vector3(0.22f, 0.04f, 0.30f), requiredViewpoint: "Desk");
 
-            // Clean, Real-World-Proportioned Desk Props (44cm lamp, 9.5cm mug, 13cm pen cup, 20cm plant)
-            PlacePrefabClean(roomRoot.transform, "DeskLamp", P_DeskLight, new Vector3(0.58f, deskTopY, 1.58f), 0.44f, 140f);
-            PlacePrefabClean(roomRoot.transform, "CoffeeMug", P_Mug, new Vector3(-0.56f, deskTopY, 0.98f), 0.095f, 45f);
+            // Interactive Desk Lamp: exact tight hitbox computed BEFORE adding bulb light, plus SpotLight shining out of the shade tip!
+            GameObject deskLamp = PlacePrefabClean(roomRoot.transform, "DeskLamp", P_DeskLight, new Vector3(0.58f, deskTopY, 1.58f), 0.44f, 140f);
+            AddAutoFitColliderAndInteractable(deskLamp, "desk_lamp", "Desk Lamp (Toggle Warm Reading Light)", "", padding: 0.002f, requiredViewpoint: "Desk");
+            Bounds lb = GetWorldBounds(deskLamp);
+            Vector3 shadeTipWorld = new Vector3(lb.min.x + lb.size.x * 0.22f, lb.max.y - lb.size.y * 0.22f, lb.min.z + lb.size.z * 0.22f);
+            GameObject lampBulbGlow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            lampBulbGlow.name = "DeskLampBulbGlow";
+            lampBulbGlow.transform.SetParent(deskLamp.transform, false);
+            lampBulbGlow.transform.position = shadeTipWorld;
+            lampBulbGlow.transform.localScale = Vector3.one * 0.042f;
+            Object.DestroyImmediate(lampBulbGlow.GetComponent<Collider>());
+            ApplyColorMaterial(lampBulbGlow.GetComponent<Renderer>(), "DeskLampBulbMat", new Color(0.84f, 0.84f, 0.80f));
+
+            GameObject lampSpot = new GameObject("DeskLampReadingLight");
+            lampSpot.transform.SetParent(deskLamp.transform, false);
+            lampSpot.transform.position = shadeTipWorld;
+            lampSpot.transform.LookAt(new Vector3(0.28f, deskTopY, 1.16f));
+            Light lComp = lampSpot.AddComponent<Light>();
+            lComp.type = LightType.Spot;
+            lComp.spotAngle = 68f;
+            lComp.innerSpotAngle = 28f;
+            lComp.color = new Color(1.0f, 0.88f, 0.66f);
+            lComp.intensity = 3.4f;
+            lComp.range = 2.4f;
+            lComp.shadows = LightShadows.Soft;
+            lComp.enabled = false;
+
+            GameObject coffeeMug = PlacePrefabClean(roomRoot.transform, "CoffeeMug", P_Mug, new Vector3(-0.56f, deskTopY, 0.98f), 0.095f, 45f);
+            AddAutoFitColliderAndInteractable(coffeeMug, "desk_coffee", "Hot Espresso Mug (Take a Sip)", "", padding: 0.004f, requiredViewpoint: "Desk");
+
             PlacePrefabClean(roomRoot.transform, "PenHolder", P_PenHolder, new Vector3(0.38f, deskTopY, 1.56f), 0.13f, 90f);
             PlacePrefabClean(roomRoot.transform, "DeskPlant", P_DeskPlant, new Vector3(-0.80f, deskTopY, 1.58f), 0.20f, 90f);
 
@@ -146,8 +174,9 @@ namespace HealthFiles.EditorTools
                 "evidence_board",
                 "Evidence Cork Board (Pin & Connect Clues)",
                 "EvidenceBoard",
-                padding: 0.04f,
-                minLocalSize: new Vector3(1.50f, 1.10f, 0.20f)
+                padding: 0.01f,
+                minLocalSize: new Vector3(1.50f, 1.10f, 0.16f),
+                requiredViewpoint: "EvidenceBoard"
             );
 
             // Sleek custom modern Wall Clock above the Archive Cabinet (clean recessed dial, 12 tick marks, live ticking hands!)
@@ -178,11 +207,13 @@ namespace HealthFiles.EditorTools
                 "printer_daniel",
                 "Office Printer (WARNING: PAPER JAM! Click to Fix)",
                 "Printer",
-                padding: 0.04f
+                padding: 0.008f,
+                requiredViewpoint: "Printer"
             );
 
-            // Classic Office Damacana Water Cooler neatly in Front-Left Corner
-            BuildOfficeWaterCooler(roomRoot.transform, new Vector3(-2.82f, 0f, -2.35f));
+            // Classic Office Damacana Water Cooler neatly in Front-Left Corner (clickable: glug-glug + rising bubbles!)
+            GameObject waterCooler = BuildOfficeWaterCooler(roomRoot.transform, new Vector3(-2.82f, 0f, -2.35f));
+            AddAutoFitColliderAndInteractable(waterCooler, "office_water_cooler", "Water Cooler (Pour a Glass of Water)", "", padding: 0.008f, requiredViewpoint: "Printer");
 
             // 10. RIGHT WALL STATION: Enclosed Wooden Office Bookcase + Golden Manual (z = +1.80)
             BuildEnclosedOfficeBookcase(roomRoot.transform, new Vector3(2.96f, 0f, 1.80f));
@@ -195,7 +226,8 @@ namespace HealthFiles.EditorTools
             // Room Plants, Trash Can, Ceiling Lights
             PlacePrefabClean(roomRoot.transform, "CornerPlantRight", P_Plant1, new Vector3(2.68f, 0f, 2.96f), 1.25f, 180f);
             PlacePrefabClean(roomRoot.transform, "CornerPlantLeft", P_Plant2, new Vector3(-2.80f, 0f, 2.98f), 1.08f, 0f);
-            PlacePrefabClean(roomRoot.transform, "TrashCan", P_TrashCan, new Vector3(-1.12f, 0f, 1.40f), 0.34f, 0f);
+            GameObject trashCan = PlacePrefabClean(roomRoot.transform, "TrashCan", P_TrashCan, new Vector3(-1.12f, 0f, 1.40f), 0.34f, 0f);
+            AddAutoFitColliderAndInteractable(trashCan, "desk_trash_can", "Office Trash Can (Check Crumpled Notes)", "", padding: 0.005f, requiredViewpoint: "Desk");
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureA", P_CeilingLight, new Vector3(-1.1f, 3.12f, 0.6f), 0.14f, 0f);
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureB", P_CeilingLight, new Vector3(1.1f, 3.12f, 0.6f), 0.14f, 0f);
 
@@ -255,6 +287,8 @@ namespace HealthFiles.EditorTools
             sysObj.AddComponent<MissionManager>();
             sysObj.AddComponent<CaseZeroHUD>();
             sysObj.AddComponent<MainMenuOverlay>();
+            sysObj.AddComponent<OfficeAtmosphereController>();
+            sysObj.AddComponent<OfficePropInteractions>();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[]
@@ -545,7 +579,8 @@ namespace HealthFiles.EditorTools
             CreateBox(parent, "WinFrame_R", new Vector3(3.35f, 1.76f, -2.23f), new Vector3(0.16f, 1.78f, 0.07f), steelFrame);
             CreateBox(parent, "WinFrame_Mid", new Vector3(3.35f, 1.76f, -0.85f), new Vector3(0.12f, 1.78f, 0.06f), steelFrame);
             CreateBox(parent, "WinBlind_Top", new Vector3(3.26f, 2.46f, -0.85f), new Vector3(0.05f, 0.30f, 2.72f), new Color(0.86f, 0.80f, 0.70f));
-            CreateGlassPane(parent, "WinGlass_Pane", new Vector3(3.35f, 1.76f, -0.85f), new Vector3(0.03f, 1.72f, 2.74f), new Color(0.76f, 0.90f, 1.0f, 0.16f));
+            GameObject winGlass = CreateGlassPane(parent, "WinGlass_Pane", new Vector3(3.35f, 1.76f, -0.85f), new Vector3(0.03f, 1.72f, 2.74f), new Color(0.76f, 0.90f, 1.0f, 0.16f));
+            AddCleanColliderAndInteractable(winGlass, "office_window", "Panoramic Office Window (Look Outside)", "", new Vector3(1.5f, 0.96f, 0.96f), Vector3.zero, requiredViewpoint: "Bookshelf");
         }
 
         private static void BuildLivingCorridorAndAcrossOffice(Transform parent)
@@ -576,6 +611,10 @@ namespace HealthFiles.EditorTools
             PlacePrefabClean(ext.transform, "Corr_PlantR", P_Plant2, new Vector3(3.35f, 0f, 6.02f), 1.25f, 90f);
             // Small hallway lounge bench facing our office
             PlacePrefabClean(ext.transform, "Corr_BenchSofa", P_Sofa, new Vector3(4.35f, 0f, 5.90f), 0.84f, 90f);
+
+            // Living Hallway: 2 detailed stylized office coworkers strolling past occasionally (rarer & natural!)
+            BuildHallwayCoworker(ext.transform, "HallwayCoworker_A", new Color(0.18f, 0.28f, 0.44f), new Color(0.20f, 0.21f, 0.25f), new Color(0.72f, 0.16f, 0.18f), 16.0f, 4.75f, isFemale: false);
+            BuildHallwayCoworker(ext.transform, "HallwayCoworker_B", new Color(0.50f, 0.22f, 0.26f), new Color(0.22f, 0.22f, 0.26f), new Color(0.92f, 0.86f, 0.72f), 44.0f, 5.25f, isFemale: true);
 
             // === ACROSS-THE-HALL GLASS CONFERENCE ROOM (z = 6.45 .. 10.2, x = -2.2 .. +3.2)! ===
             // Solid side/back walls of the opposite office + its own glass front partition facing our hallway!
@@ -645,6 +684,32 @@ namespace HealthFiles.EditorTools
             BuildCitySkyscraper(ext.transform, "City_Mid3", new Vector3(14.0f, -11f, -1.1f), new Vector3(3.2f, 19.5f, 3.6f), new Color(0.80f, 0.76f, 0.70f), 7, 4);
             BuildCitySkyscraper(ext.transform, "City_Mid4", new Vector3(15.4f, -11f,  3.4f), new Vector3(3.5f, 23.0f, 3.8f), new Color(0.62f, 0.68f, 0.76f), 9, 5);
             BuildCitySkyscraper(ext.transform, "City_Mid5", new Vector3(14.4f, -11f,  7.8f), new Vector3(3.4f, 18.5f, 3.8f), new Color(0.75f, 0.71f, 0.65f), 7, 4);
+
+            // Warm glowing afternoon Sun + soft atmospheric halo peeking in the upper-right sky!
+            GameObject sunCore = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sunCore.name = "SkySun_Core";
+            sunCore.transform.SetParent(ext.transform, false);
+            sunCore.transform.position = new Vector3(29f, 10.8f, -19.5f);
+            sunCore.transform.localScale = Vector3.one * 2.1f;
+            Object.DestroyImmediate(sunCore.GetComponent<Collider>());
+            Renderer sunR = sunCore.GetComponent<Renderer>();
+            sunR.shadowCastingMode = ShadowCastingMode.Off;
+            Material sunMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
+            if (sunMat.HasProperty("_BaseColor")) sunMat.SetColor("_BaseColor", new Color(1.0f, 0.96f, 0.78f));
+            else sunMat.color = new Color(1.0f, 0.96f, 0.78f);
+            string sunMatPath = $"{MaterialFolder}/Mat_SkySunCore.mat";
+            AssetDatabase.CreateAsset(sunMat, sunMatPath);
+            sunR.sharedMaterial = sunMat;
+
+            GameObject sunHalo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sunHalo.name = "SkySun_Halo";
+            sunHalo.transform.SetParent(ext.transform, false);
+            sunHalo.transform.position = new Vector3(29.2f, 10.8f, -19.5f);
+            sunHalo.transform.localScale = Vector3.one * 4.4f;
+            Object.DestroyImmediate(sunHalo.GetComponent<Collider>());
+            Renderer haloR = sunHalo.GetComponent<Renderer>();
+            haloR.shadowCastingMode = ShadowCastingMode.Off;
+            haloR.sharedMaterial = GetOrCreateTransparentMaterial("SkySunHalo", new Color(1.0f, 0.93f, 0.65f, 0.24f));
 
             // 7 widely-spaced fluffy clouds spanning the FULL blue sky height (y = 5.2 .. 11.2m), spawning off-screen right (z = -38) and wrapping behind the tall skyscrapers!
             BuildDriftingCloud(ext.transform, "SkyCloud_1", new Vector3(20.5f,  5.4f, -36.5f), 0.76f);
@@ -872,9 +937,9 @@ namespace HealthFiles.EditorTools
             CreateHorizontalBook(shelf.transform, "Book_Flat1", new Vector3(0.02f, 0.678f, -0.05f), 0.24f, 0.048f, 0.20f, new Color(0.24f, 0.30f, 0.38f), "INDEX",  silverAccent);
             CreateHorizontalBook(shelf.transform, "Book_Flat2", new Vector3(0.02f, 0.727f, -0.05f), 0.22f, 0.044f, 0.19f, new Color(0.46f, 0.32f, 0.18f), "DIGEST", goldAccent);
 
-            // Clickable Easter-Egg Book #1: Digital Privacy 101 (Emerald Green, pulled slightly forward!)
+            // Clickable Easter-Egg Book #1: Digital Privacy 101 (Emerald Green, tight hitbox, Bookshelf-only!)
             GameObject bookPrivacy = CreateDetailedBook(shelf.transform, "Book_Privacy101", new Vector3(-0.02f, 0.678f, 0.16f), 0.28f, 0.060f, 0.22f, new Color(0.14f, 0.44f, 0.30f), "PRIVACY", goldAccent);
-            AddCleanColliderAndInteractable(bookPrivacy, "book_easter_privacy", "Book: 'Digital Privacy 101' (Read)", "Bookshelf", new Vector3(0.24f, 0.30f, 0.10f), new Vector3(0f, 0.14f, 0f));
+            AddCleanColliderAndInteractable(bookPrivacy, "book_easter_privacy", "Book: 'Digital Privacy 101' (Read)", "Bookshelf", new Vector3(0.22f, 0.28f, 0.066f), new Vector3(0f, 0.14f, 0f), requiredViewpoint: "Bookshelf");
 
             CreateDetailedBook(shelf.transform, "Book_Cases24",  new Vector3(0.02f, 0.678f, 0.24f), 0.27f, 0.054f, 0.22f, new Color(0.26f, 0.28f, 0.34f), "FILES 24", silverAccent);
             CreateDetailedBook(shelf.transform, "Book_Cases25",  new Vector3(0.02f, 0.678f, 0.30f), 0.27f, 0.054f, 0.22f, new Color(0.26f, 0.28f, 0.34f), "FILES 25", silverAccent);
@@ -891,14 +956,14 @@ namespace HealthFiles.EditorTools
             // Sleek dark steel bookend right against Book_Sources
             CreateBox(shelf.transform, "Bookend_MidL", new Vector3(0.02f, 1.21f, -0.27f), new Vector3(0.16f, 0.14f, 0.012f), new Color(0.16f, 0.17f, 0.20f), local: true, removeCollider: true);
 
-            // THE INVESTIGATION MANUAL: Sleek Navy-Blue & Gold Leather Handbook, upright & pulled 5cm forward with red bookmark!
+            // THE INVESTIGATION MANUAL: Sleek Navy-Blue & Gold Leather Handbook (tight hitbox, Bookshelf-only!)
             GameObject manual = CreateDetailedBook(shelf.transform, "InvestigationManual", new Vector3(-0.04f, 1.138f, -0.05f), 0.30f, 0.068f, 0.23f, new Color(0.11f, 0.20f, 0.38f), "MANUAL", goldAccent);
             CreateBox(manual.transform, "ManualBookmark", new Vector3(-0.08f, 0.315f, 0f), new Vector3(0.015f, 0.04f, 0.022f), new Color(0.84f, 0.16f, 0.16f), local: true, removeCollider: true);
-            AddCleanColliderAndInteractable(manual, "bookshelf_manual", "Investigation Manual (Pick Up — Essential!)", "Bookshelf", new Vector3(0.26f, 0.34f, 0.14f), new Vector3(0f, 0.15f, 0f));
+            AddCleanColliderAndInteractable(manual, "bookshelf_manual", "Investigation Manual (Pick Up — Essential!)", "Bookshelf", new Vector3(0.23f, 0.31f, 0.074f), new Vector3(0f, 0.15f, 0f), requiredViewpoint: "Bookshelf");
 
-            // Clickable Easter-Egg Book #2: 101 Viral Health Myths (Deep Burgundy, pulled slightly forward!)
+            // Clickable Easter-Egg Book #2: 101 Viral Health Myths (tight hitbox, Bookshelf-only!)
             GameObject bookMyths = CreateDetailedBook(shelf.transform, "Book_HealthMyths", new Vector3(-0.02f, 1.138f, 0.16f), 0.27f, 0.058f, 0.21f, new Color(0.56f, 0.16f, 0.18f), "MYTHS", goldAccent);
-            AddCleanColliderAndInteractable(bookMyths, "book_easter_myths", "Book: '101 Viral Health Myths' (Read)", "Bookshelf", new Vector3(0.24f, 0.30f, 0.10f), new Vector3(0f, 0.14f, 0f));
+            AddCleanColliderAndInteractable(bookMyths, "book_easter_myths", "Book: '101 Viral Health Myths' (Read)", "Bookshelf", new Vector3(0.21f, 0.27f, 0.064f), new Vector3(0f, 0.135f, 0f), requiredViewpoint: "Bookshelf");
 
             CreateDetailedBook(shelf.transform, "Book_Journal",  new Vector3(0.02f, 1.138f, 0.24f), 0.25f, 0.050f, 0.20f, new Color(0.24f, 0.36f, 0.28f), "JOURNAL",  silverAccent);
             CreateDetailedBook(shelf.transform, "Book_Notes",    new Vector3(0.02f, 1.138f, 0.30f), 0.23f, 0.048f, 0.20f, new Color(0.46f, 0.38f, 0.26f), "NOTES",    goldAccent);
@@ -916,9 +981,9 @@ namespace HealthFiles.EditorTools
             CreateHorizontalBook(shelf.transform, "Book_Flat3", new Vector3(0.02f, 1.598f, -0.15f), 0.24f, 0.046f, 0.20f, new Color(0.20f, 0.34f, 0.30f), "WHO 24", goldAccent);
             CreateHorizontalBook(shelf.transform, "Book_Flat4", new Vector3(0.02f, 1.645f, -0.15f), 0.22f, 0.042f, 0.19f, new Color(0.40f, 0.22f, 0.22f), "WHO 25", silverAccent);
 
-            // Clickable Easter-Egg Book #3: Detective's Coffee Guide (Warm Caramel!)
+            // Clickable Easter-Egg Book #3: Detective's Coffee Guide (tight hitbox, Bookshelf-only!)
             GameObject bookCoffee = CreateDetailedBook(shelf.transform, "Book_CoffeeGuide", new Vector3(-0.02f, 1.598f, 0.10f), 0.25f, 0.058f, 0.21f, new Color(0.62f, 0.40f, 0.18f), "COFFEE", goldAccent);
-            AddCleanColliderAndInteractable(bookCoffee, "book_easter_coffee", "Book: 'Detective's Coffee Guide' (Read)", "Bookshelf", new Vector3(0.24f, 0.28f, 0.10f), new Vector3(0f, 0.13f, 0f));
+            AddCleanColliderAndInteractable(bookCoffee, "book_easter_coffee", "Book: 'Detective's Coffee Guide' (Read)", "Bookshelf", new Vector3(0.21f, 0.25f, 0.064f), new Vector3(0f, 0.125f, 0f), requiredViewpoint: "Bookshelf");
 
             CreateDetailedBook(shelf.transform, "Book_PubHealth",new Vector3(0.02f, 1.598f, 0.20f), 0.28f, 0.054f, 0.22f, new Color(0.18f, 0.34f, 0.44f), "eHEALTH",  goldAccent);
             CreateDetailedBook(shelf.transform, "Book_Guide",    new Vector3(0.02f, 1.598f, 0.26f), 0.25f, 0.050f, 0.21f, new Color(0.34f, 0.24f, 0.30f), "POLICY",   silverAccent);
@@ -953,19 +1018,10 @@ namespace HealthFiles.EditorTools
 
             if (!string.IsNullOrEmpty(spineTitle))
             {
-                GameObject txtObj = new GameObject($"{name}_SpineTitle");
-                txtObj.transform.SetParent(book.transform, false);
-                txtObj.transform.localPosition = new Vector3(-depthX * 0.5f - 0.003f, thicknessY * 0.5f, 0f);
-                txtObj.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                txtObj.transform.localScale = Vector3.one * 0.007f;
-
-                TextMesh tm = txtObj.AddComponent<TextMesh>();
-                tm.text = spineTitle;
-                tm.fontSize = 32;
-                tm.fontStyle = FontStyle.Bold;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.alignment = TextAlignment.Center;
-                tm.color = accentColor;
+                // Depth-occluded WorldSpace UI Canvas label (NEVER bleeds through walls or other books!)
+                AddWorldSignText(book.transform, $"{name}_SpineCanvas", new Vector3(-depthX * 0.5f - 0.002f, thicknessY * 0.5f, 0f),
+                    Quaternion.Euler(0f, 90f, 0f), new Vector2(lengthZ * 0.88f, thicknessY * 0.82f),
+                    $"<b>{spineTitle}</b>", 34, accentColor, local: true);
             }
         }
 
@@ -974,7 +1030,7 @@ namespace HealthFiles.EditorTools
         /// tapered dome shoulder, ribbed translucent polycarbonate bottle, visible water fill inside,
         /// hot (red) & cold (blue) taps, drip grate, and cup dispenser!
         /// </summary>
-        private static void BuildOfficeWaterCooler(Transform parent, Vector3 pos)
+        private static GameObject BuildOfficeWaterCooler(Transform parent, Vector3 pos)
         {
             GameObject cooler = new GameObject("OfficeWaterCooler");
             cooler.transform.SetParent(parent, false);
@@ -1029,6 +1085,73 @@ namespace HealthFiles.EditorTools
             cupTube.transform.localScale = new Vector3(0.072f, 0.145f, 0.072f);
             Object.DestroyImmediate(cupTube.GetComponent<Collider>());
             ApplyColorMaterial(cupTube.GetComponent<Renderer>(), "CoolerCupTube", cupWhite);
+            return cooler;
+        }
+
+        private static void BuildHallwayCoworker(Transform parent, string name, Color jacketCol, Color pantsCol, Color tieOrScarfCol, float startDelay, float corridorZ, bool isFemale)
+        {
+            GameObject person = new GameObject(name);
+            person.transform.SetParent(parent, false);
+            person.transform.position = new Vector3(-6.4f, 0f, corridorZ);
+
+            Color skin = isFemale ? new Color(0.92f, 0.78f, 0.66f) : new Color(0.86f, 0.71f, 0.58f);
+            Color hair = isFemale ? new Color(0.32f, 0.18f, 0.10f) : new Color(0.16f, 0.13f, 0.11f);
+            Color shirtWhite = new Color(0.95f, 0.96f, 0.97f);
+            Color shoeDark = new Color(0.12f, 0.11f, 0.11f);
+            Color eyeDark = new Color(0.10f, 0.10f, 0.12f);
+
+            // Tailored torso: blazer + white collared shirt front + tie/scarf + belt!
+            CreateBox(person.transform, $"{name}_Torso",      new Vector3(0f,     1.12f, 0f), new Vector3(0.23f, 0.54f, 0.38f), jacketCol,  local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_ShirtFront", new Vector3(0.112f, 1.18f, 0f), new Vector3(0.02f, 0.36f, 0.12f), shirtWhite, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_TieScarf",   new Vector3(0.122f, 1.16f, 0f), new Vector3(0.015f, isFemale ? 0.14f : 0.28f, isFemale ? 0.14f : 0.045f), tieOrScarfCol, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_Belt",       new Vector3(0f,     0.85f, 0f), new Vector3(0.24f, 0.045f, 0.39f), shoeDark, local: true, removeCollider: true);
+            // Neck + sculpted head + eyes + eyebrows + nose + styled hair!
+            CreateBox(person.transform, $"{name}_Neck",       new Vector3(0f,     1.42f, 0f), new Vector3(0.09f, 0.09f, 0.09f), skin, local: true, removeCollider: true);
+            CreateSphere(person.transform, $"{name}_Head",    new Vector3(0f,     1.55f, 0f), new Vector3(0.21f, 0.24f, 0.20f), skin);
+            CreateBox(person.transform, $"{name}_EyeL",       new Vector3(0.10f,  1.57f, -0.045f), new Vector3(0.015f, 0.022f, 0.022f), eyeDark, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_EyeR",       new Vector3(0.10f,  1.57f,  0.045f), new Vector3(0.015f, 0.022f, 0.022f), eyeDark, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_BrowL",      new Vector3(0.102f, 1.60f, -0.045f), new Vector3(0.012f, 0.010f, 0.036f), hair, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_BrowR",      new Vector3(0.102f, 1.60f,  0.045f), new Vector3(0.012f, 0.010f, 0.036f), hair, local: true, removeCollider: true);
+            CreateBox(person.transform, $"{name}_Nose",       new Vector3(0.11f,  1.54f,  0f),     new Vector3(0.025f, 0.032f, 0.022f), skin * 0.94f, local: true, removeCollider: true);
+            CreateSphere(person.transform, $"{name}_HairTop", new Vector3(-0.015f,1.62f,  0f),     new Vector3(0.22f, 0.16f, 0.215f), hair);
+            if (isFemale)
+            {
+                // Neat back hair bun + side framing
+                CreateSphere(person.transform, $"{name}_HairBun", new Vector3(-0.12f, 1.56f, 0f), new Vector3(0.11f, 0.11f, 0.11f), hair);
+                CreateBox(person.transform, $"{name}_HairBack", new Vector3(-0.06f, 1.51f, 0f), new Vector3(0.11f, 0.16f, 0.21f), hair, local: true, removeCollider: true);
+            }
+
+            // Pivoted swinging legs with dress shoes!
+            GameObject lLeg = new GameObject($"{name}_LLeg"); lLeg.transform.SetParent(person.transform, false); lLeg.transform.localPosition = new Vector3(0f, 0.83f, -0.095f);
+            CreateBox(lLeg.transform, $"{name}_LLegMesh", new Vector3(0f, -0.39f, 0f), new Vector3(0.12f, 0.78f, 0.13f), pantsCol, local: true, removeCollider: true);
+            CreateBox(lLeg.transform, $"{name}_LShoe",    new Vector3(0.04f, -0.80f, 0f), new Vector3(0.20f, 0.07f, 0.12f), shoeDark, local: true, removeCollider: true);
+
+            GameObject rLeg = new GameObject($"{name}_RLeg"); rLeg.transform.SetParent(person.transform, false); rLeg.transform.localPosition = new Vector3(0f, 0.83f,  0.095f);
+            CreateBox(rLeg.transform, $"{name}_RLegMesh", new Vector3(0f, -0.39f, 0f), new Vector3(0.12f, 0.78f, 0.13f), pantsCol, local: true, removeCollider: true);
+            CreateBox(rLeg.transform, $"{name}_RShoe",    new Vector3(0.04f, -0.80f, 0f), new Vector3(0.20f, 0.07f, 0.12f), shoeDark, local: true, removeCollider: true);
+
+            // Pivoted swinging arms with cuffs, hands & office prop (briefcase or coffee cup + folder!)
+            GameObject lArm = new GameObject($"{name}_LArm"); lArm.transform.SetParent(person.transform, false); lArm.transform.localPosition = new Vector3(0f, 1.33f, -0.24f);
+            CreateBox(lArm.transform, $"{name}_LArmMesh", new Vector3(0f, -0.24f, 0f), new Vector3(0.095f, 0.48f, 0.095f), jacketCol, local: true, removeCollider: true);
+            CreateBox(lArm.transform, $"{name}_LHand",    new Vector3(0f, -0.50f, 0f), new Vector3(0.075f, 0.08f, 0.075f), skin, local: true, removeCollider: true);
+
+            GameObject rArm = new GameObject($"{name}_RArm"); rArm.transform.SetParent(person.transform, false); rArm.transform.localPosition = new Vector3(0f, 1.33f,  0.24f);
+            CreateBox(rArm.transform, $"{name}_RArmMesh", new Vector3(0f, -0.24f, 0f), new Vector3(0.095f, 0.48f, 0.095f), jacketCol, local: true, removeCollider: true);
+            CreateBox(rArm.transform, $"{name}_RHand",    new Vector3(0f, -0.50f, 0f), new Vector3(0.075f, 0.08f, 0.075f), skin, local: true, removeCollider: true);
+            if (isFemale)
+            {
+                // Holding a yellow case folder + takeaway coffee cup
+                CreateBox(rArm.transform, $"{name}_Folder", new Vector3(0.09f, -0.46f, 0.02f), new Vector3(0.24f, 0.18f, 0.025f), new Color(0.92f, 0.82f, 0.48f), local: true, removeCollider: true);
+                CreateBox(lArm.transform, $"{name}_CoffeeCup", new Vector3(0.05f, -0.50f, 0f), new Vector3(0.065f, 0.11f, 0.065f), shirtWhite, local: true, removeCollider: true);
+            }
+            else
+            {
+                // Holding a sleek brown leather briefcase
+                CreateBox(rArm.transform, $"{name}_Briefcase", new Vector3(0.02f, -0.64f, 0.04f), new Vector3(0.32f, 0.24f, 0.08f), new Color(0.36f, 0.22f, 0.12f), local: true, removeCollider: true);
+            }
+
+            HallwayWalker walker = person.AddComponent<HallwayWalker>();
+            walker.Configure(lLeg.transform, rLeg.transform, lArm.transform, rArm.transform, startDelay, corridorZ);
         }
 
         private static void CreateCoolerPart(Transform parent, PrimitiveType type, string name, Vector3 localPos, Vector3 scale, Material mat)
@@ -1099,23 +1222,12 @@ namespace HealthFiles.EditorTools
             CreateBox(book.transform, $"{name}_BandTop", new Vector3(-depth * 0.5f - 0.001f, height * 0.84f, 0f), new Vector3(0.004f, 0.010f, thickness + 0.002f), accentColor, local: true, removeCollider: true);
             CreateBox(book.transform, $"{name}_BandBot", new Vector3(-depth * 0.5f - 0.001f, height * 0.16f, 0f), new Vector3(0.004f, 0.010f, thickness + 0.002f), accentColor, local: true, removeCollider: true);
 
-            // Crisp readable 3D Spine Title facing -X (out into the room!)
+            // Crisp depth-occluded WorldSpace UI Spine Title facing -X (NEVER bleeds through walls or other books!)
             if (!string.IsNullOrEmpty(spineTitle))
             {
-                GameObject txtObj = new GameObject($"{name}_SpineTitle");
-                txtObj.transform.SetParent(book.transform, false);
-                txtObj.transform.localPosition = new Vector3(-depth * 0.5f - 0.004f, height * 0.50f, 0f);
-                // Rotate so text faces -X and reads vertically along the spine
-                txtObj.transform.localRotation = Quaternion.Euler(0f, 90f, 90f);
-                txtObj.transform.localScale = Vector3.one * 0.008f;
-
-                TextMesh tm = txtObj.AddComponent<TextMesh>();
-                tm.text = spineTitle;
-                tm.fontSize = 34;
-                tm.fontStyle = FontStyle.Bold;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.alignment = TextAlignment.Center;
-                tm.color = accentColor;
+                AddWorldSignText(book.transform, $"{name}_SpineCanvas", new Vector3(-depth * 0.5f - 0.002f, height * 0.50f, 0f),
+                    Quaternion.Euler(0f, 90f, 90f), new Vector2(height * 0.72f, thickness * 0.85f),
+                    $"<b>{spineTitle}</b>", 38, accentColor, local: true);
             }
 
             return book;
@@ -1319,7 +1431,7 @@ namespace HealthFiles.EditorTools
                 sd.containsAlexLetter = (i == 1);
                 sd.emptyMessage = emptyMsgs[i];
 
-                AddCleanColliderAndInteractable(drawerObj, ids[i], $"Slide Open {titles[i]}", "Cabinet", new Vector3(0.09f, 0.39f, 0.56f), new Vector3(0.32f, 0f, 0f));
+                AddCleanColliderAndInteractable(drawerObj, ids[i], $"Slide Open {titles[i]}", "Cabinet", new Vector3(0.06f, 0.39f, 0.56f), new Vector3(0.32f, 0f, 0f), requiredViewpoint: "Cabinet");
 
                 // Populate EVERY drawer with upright hanging manila file folders (real archive cabinet look!)
                 Color[] folderPalette =
@@ -1367,7 +1479,7 @@ namespace HealthFiles.EditorTools
                     AddWorldSignText(env.transform, "EnvelopeTopTabText", new Vector3(0.011f, 0.095f, 0f), Quaternion.Euler(0f, -90f, 0f), new Vector2(0.30f, 0.045f),
                         "<b>A. MORETTI — CONFIDENTIAL</b>", 24, new Color(0.45f, 0.10f, 0.10f), local: true);
 
-                    AddCleanColliderAndInteractable(env, "cabinet_alex_letter", "Alex Moretti's Confidential Envelope (Pick Up!)", "", new Vector3(0.08f, 0.26f, 0.36f), Vector3.zero);
+                    AddCleanColliderAndInteractable(env, "cabinet_alex_letter", "Alex Moretti's Confidential Envelope (Pick Up!)", "", new Vector3(0.04f, 0.24f, 0.34f), Vector3.zero, requiredViewpoint: "Cabinet");
                 }
             }
         }
@@ -1434,35 +1546,36 @@ namespace HealthFiles.EditorTools
             string id,
             string label,
             string focusViewpoint,
-            float padding = 0.03f,
-            Vector3? minLocalSize = null)
+            float padding = 0.004f,
+            Vector3? minLocalSize = null,
+            string requiredViewpoint = "")
         {
-            Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
+            // Use exact child MeshFilter local bounds (NOT inflated world AABBs!) so rotated objects get 1:1 exact hitboxes!
+            MeshFilter[] filters = target.GetComponentsInChildren<MeshFilter>();
             bool hasBounds = false;
             Bounds localBounds = new Bounds();
 
-            foreach (Renderer r in renderers)
+            foreach (MeshFilter mf in filters)
             {
-                if (r is MeshRenderer || r is SkinnedMeshRenderer)
+                if (mf == null || mf.sharedMesh == null) continue;
+                Bounds mb = mf.sharedMesh.bounds;
+                Vector3 ext = mb.extents;
+                Vector3 ctr = mb.center;
+                for (int sx = -1; sx <= 1; sx += 2)
+                for (int sy = -1; sy <= 1; sy += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
                 {
-                    Bounds wb = r.bounds;
-                    Vector3 ext = wb.extents;
-                    Vector3 ctr = wb.center;
-                    for (int sx = -1; sx <= 1; sx += 2)
-                    for (int sy = -1; sy <= 1; sy += 2)
-                    for (int sz = -1; sz <= 1; sz += 2)
+                    Vector3 meshLocalCorner = ctr + new Vector3(ext.x * sx, ext.y * sy, ext.z * sz);
+                    Vector3 worldCorner = mf.transform.TransformPoint(meshLocalCorner);
+                    Vector3 targetLocalCorner = target.transform.InverseTransformPoint(worldCorner);
+                    if (!hasBounds)
                     {
-                        Vector3 worldCorner = ctr + new Vector3(ext.x * sx, ext.y * sy, ext.z * sz);
-                        Vector3 localCorner = target.transform.InverseTransformPoint(worldCorner);
-                        if (!hasBounds)
-                        {
-                            localBounds = new Bounds(localCorner, Vector3.zero);
-                            hasBounds = true;
-                        }
-                        else
-                        {
-                            localBounds.Encapsulate(localCorner);
-                        }
+                        localBounds = new Bounds(targetLocalCorner, Vector3.zero);
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        localBounds.Encapsulate(targetLocalCorner);
                     }
                 }
             }
@@ -1476,10 +1589,10 @@ namespace HealthFiles.EditorTools
                 finalSize = new Vector3(Mathf.Max(finalSize.x, m.x), Mathf.Max(finalSize.y, m.y), Mathf.Max(finalSize.z, m.z));
             }
 
-            AddCleanColliderAndInteractable(target, id, label, focusViewpoint, finalSize, finalCenter);
+            AddCleanColliderAndInteractable(target, id, label, focusViewpoint, finalSize, finalCenter, requiredViewpoint);
         }
 
-        private static void AddCleanColliderAndInteractable(GameObject target, string id, string label, string focusViewpoint, Vector3 colliderSize, Vector3 colliderCenter)
+        private static void AddCleanColliderAndInteractable(GameObject target, string id, string label, string focusViewpoint, Vector3 colliderSize, Vector3 colliderCenter, string requiredViewpoint = "")
         {
             BoxCollider box = target.GetComponent<BoxCollider>();
             if (box == null) box = target.AddComponent<BoxCollider>();
@@ -1491,6 +1604,7 @@ namespace HealthFiles.EditorTools
             inter.interactableId = id;
             inter.displayLabel = label;
             inter.focusViewpointId = focusViewpoint;
+            inter.requiredViewpointId = requiredViewpoint;
         }
 
         private static GameObject CreateBox(Transform parent, string name, Vector3 pos, Vector3 scale, Color color, bool local = false, bool removeCollider = false)

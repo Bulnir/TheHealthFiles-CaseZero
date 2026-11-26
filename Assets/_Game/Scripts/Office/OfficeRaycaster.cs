@@ -46,7 +46,11 @@ namespace HealthFiles
             InteractableObject hitObj = null;
             if (Physics.Raycast(ray, out RaycastHit hit, maxInteractDistance))
             {
-                hitObj = hit.collider.GetComponentInParent<InteractableObject>();
+                InteractableObject candidate = hit.collider.GetComponentInParent<InteractableObject>();
+                if (candidate != null && IsAllowedAtCurrentViewpoint(candidate))
+                {
+                    hitObj = candidate;
+                }
             }
 
             if (hitObj != currentHovered)
@@ -73,6 +77,13 @@ namespace HealthFiles
             {
                 currentHovered.Interact();
             }
+        }
+
+        private static bool IsAllowedAtCurrentViewpoint(InteractableObject obj)
+        {
+            if (string.IsNullOrEmpty(obj.requiredViewpointId)) return true;
+            if (CameraViewpointController.Instance == null) return true;
+            return CameraViewpointController.Instance.CurrentViewpointId == obj.requiredViewpointId;
         }
 
         private void ClearHover()
