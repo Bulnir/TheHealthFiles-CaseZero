@@ -380,12 +380,7 @@ namespace HealthFiles
         public void FocusComputerScreen()
         {
             CameraViewpointController.Instance?.MoveToViewpoint("Computer");
-
-            // If player already collected Alex's letter and is on the blog inspection step, open Browser directly!
-            if (MissionManager.Instance != null && MissionManager.Instance.CurrentState == MissionState.Alex_InspectBlogAndPolicy)
-            {
-                OpenOSApp("browser_audit", playSound: false);
-            }
+            // Always land on the clean Windows Desktop first so the player opens Browser / apps naturally!
         }
 
         private void OpenOSApp(string appId, bool playSound = true)
@@ -481,12 +476,13 @@ namespace HealthFiles
         public void UnlockBookcaseBonusNote(string bookKey)
         {
             if (bookcaseStickyObj == null || bookcaseStickyText == null) return;
+            bookcaseStickyObj.SetActive(true);
             Image bg = bookcaseStickyObj.GetComponent<Image>();
             if (bg != null) bg.color = new Color(0.98f, 0.91f, 0.48f, 0.96f);
             bookcaseStickyText.color = new Color(0.22f, 0.17f, 0.06f);
             bookcaseStickyText.text = bookKey == "myths"
-                ? "<b>★ BOOKCASE TIP (Myths):</b>\nPromo codes = hidden ad! Check WHOIS & EU Registry for fake bans."
-                : "<b>★ BOOKCASE TIP (Privacy):</b>\nWatch Policy v4.2 dates & Section 4.2 — vague sharing ≠ proven sale!";
+                ? "<b>★ TIP:</b> Promo codes = hidden ad! Check WHOIS & EU Registry."
+                : "<b>★ TIP:</b> Check Policy v4.2 date & Sec. 4.2 wording!";
         }
 
         private void SelectReferenceTab(int tabIdx)
@@ -730,13 +726,15 @@ namespace HealthFiles
             bool collected = EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence("blog_unverified");
             if (collected) activeQueueFileIndex = 2;
 
-            // Queue progress header
+            // Minimal progress indicator (dots + short file label — zero clutter!)
             if (queueProgressText != null)
             {
-                string f1 = queueFileCompleted[0] ? "<color=#69F0AE>[1] FAQ ✓</color>" : (activeQueueFileIndex == 0 ? "<color=#FFD54F><b>▶ [1] Official FAQ</b></color>" : "[1] FAQ");
-                string f2 = queueFileCompleted[1] ? "<color=#69F0AE>[2] Influencer Ad ✓</color>" : (activeQueueFileIndex == 1 ? "<color=#FFD54F><b>▶ [2] Influencer Ad</b></color>" : "[2] Influencer Ad");
-                string f3 = collected ? "<color=#69F0AE>[3] Alex's Blog ✓</color>" : (activeQueueFileIndex == 2 ? "<color=#FF8A80><b>▶ [3] Alex's Blog (Boss)</b></color>" : "[3] Alex's Blog");
-                queueProgressText.text = $"DESK QUEUE:   {f1}   →   {f2}   →   {f3}";
+                string d1 = queueFileCompleted[0] ? "<color=#69F0AE>●</color>" : (activeQueueFileIndex == 0 ? "<color=#FFD54F>●</color>" : "○");
+                string d2 = queueFileCompleted[1] ? "<color=#69F0AE>●</color>" : (activeQueueFileIndex == 1 ? "<color=#FFD54F>●</color>" : "○");
+                string d3 = collected ? "<color=#69F0AE>●</color>" : (activeQueueFileIndex == 2 ? "<color=#FF8A80>●</color>" : "○");
+                string name = activeQueueFileIndex == 0 ? "File 1/3: Official FAQ"
+                    : (activeQueueFileIndex == 1 ? "File 2/3: Influencer Post" : "File 3/3: Alex's Blog");
+                queueProgressText.text = $"{d1} {d2} {d3}    <b>{name}</b>";
             }
 
             if (leftDocHeaderText != null)
@@ -879,15 +877,15 @@ namespace HealthFiles
             if (stepGuideText != null)
             {
                 if (collected)
-                    stepGuideText.text = "<color=#69F0AE><b>✓ ALL 3 FILES AUDITED!</b>  Click '↓ Step Back' and call Alex on your Office Phone!</color>";
+                    stepGuideText.text = "<color=#69F0AE><b>Done! Step Back &amp; call Alex.</b></color>";
                 else if (activeQueueFileIndex == 0)
-                    stepGuideText.text = "<color=#FFD54F><b>HOW TO PLAY (FILE 1/3):</b></color>  Compare LEFT vs RIGHT (switch tabs). All 4 lines are TRUE → click <b>STAMP: VERIFIED ✓</b> below!";
+                    stepGuideText.text = "<color=#FFD54F>All facts match → Stamp <b>VERIFIED</b></color>";
                 else if (solved >= req)
-                    stepGuideText.text = "<color=#69F0AE><b>STEP 3:</b></color>  All lies caught! Click the correct <b>VERDICT STAMP</b> at the bottom!";
+                    stepGuideText.text = "<color=#69F0AE><b>All caught!</b> Choose a stamp below.</color>";
                 else if (selectedLeftIndex < 0)
-                    stepGuideText.text = $"<color=#FFD54F><b>STEP 1:</b></color>  Click a <b>suspicious claim on the LEFT</b>  →  then find its proof on the RIGHT ({solved}/{req} caught)";
+                    stepGuideText.text = $"<color=#FFD54F>1. Click a lie on the LEFT</color>  ({solved}/{req})";
                 else
-                    stepGuideText.text = $"<color=#80D8FF><b>STEP 2:</b></color>  Claim selected! Now switch RIGHT tabs (<b>Policy / Registry / Rulebook</b>) &amp; click the <b>contradicting fact</b>!";
+                    stepGuideText.text = "<color=#80D8FF>2. Click its proof on the RIGHT</color>";
             }
 
             if (stampStatusText != null)
@@ -1310,74 +1308,61 @@ namespace HealthFiles
             LayoutElement sgLe = stepGuideText.gameObject.AddComponent<LayoutElement>();
             sgLe.minWidth = 300f; sgLe.flexibleWidth = 1f;
 
-            // Split-Screen Warm Walnut Detective Workspace: LEFT = Illustrated Real Website, RIGHT = Warm Manila Case Binder!
+            // Clean 2-Side Workspace — ZERO redundant strips, maximum breathing room!
             RectTransform deskArea = CreatePanel(gameBox.transform, "InspectionDeskArea", new Color(0.135f, 0.120f, 0.110f, 1f), raycast: false, rounded: false);
-            deskArea.sizeDelta = new Vector2(0f, 344f);
+            deskArea.sizeDelta = new Vector2(0f, 356f);
             inspectionDeskRect = deskArea;
 
-            // Generate 3 crisp procedural Hero Banner graphics (Medical Portal, Social Reel, Conspiracy Blog!)
             heroBannerFaqTex    = CreateHeroBannerTexture(0);
             heroBannerSocialTex = CreateHeroBannerTexture(1);
             heroBannerBlogTex   = CreateHeroBannerTexture(2);
 
-            // Right-Side Warm Archival Case Binder Tab Strip ("OFFICIAL DOSSIER" with cream folder divider tabs!)
-            RectTransform rightAppBar = CreatePanel(deskArea, "RightAppTitleBar", new Color(0.18f, 0.16f, 0.145f, 1f), raycast: false, rounded: false);
-            rightAppBar.anchorMin = new Vector2(0.505f, 1f); rightAppBar.anchorMax = new Vector2(0.992f, 1f); rightAppBar.pivot = new Vector2(0.5f, 1f);
-            rightAppBar.sizeDelta = new Vector2(0f, 26f); rightAppBar.anchoredPosition = new Vector2(0f, -4f);
-
-            Text termLbl = CreateText(rightAppBar, "TermLbl", "<b>CASE DOSSIER</b>", 10, new Color(0.88f, 0.80f, 0.66f), TextAnchor.MiddleLeft);
-            RectTransform tlRt = termLbl.GetComponent<RectTransform>();
-            tlRt.anchorMin = new Vector2(0f, 0f); tlRt.anchorMax = new Vector2(0.30f, 1f); tlRt.offsetMin = new Vector2(8f, 0f); tlRt.offsetMax = Vector2.zero;
-
+            // Clean Right Folder Tab Strip (Policy v4.2 | WHOIS & EU | Rulebook | ↺)
             GameObject refTabBar = new GameObject("RightRefTabs");
-            refTabBar.transform.SetParent(rightAppBar, false);
+            refTabBar.transform.SetParent(deskArea, false);
             RectTransform rtbRt = refTabBar.AddComponent<RectTransform>();
-            rtbRt.anchorMin = new Vector2(0.30f, 0.08f); rtbRt.anchorMax = new Vector2(0.99f, 0.94f);
-            rtbRt.offsetMin = Vector2.zero; rtbRt.offsetMax = Vector2.zero;
+            rtbRt.anchorMin = new Vector2(0.505f, 1f); rtbRt.anchorMax = new Vector2(0.992f, 1f); rtbRt.pivot = new Vector2(0.5f, 1f);
+            rtbRt.sizeDelta = new Vector2(0f, 24f); rtbRt.anchoredPosition = new Vector2(0f, -6f);
             HorizontalLayoutGroup rtLay = refTabBar.AddComponent<HorizontalLayoutGroup>();
-            rtLay.spacing = 3; rtLay.childControlWidth = true; rtLay.childForceExpandWidth = true;
+            rtLay.spacing = 4; rtLay.childControlWidth = true; rtLay.childForceExpandWidth = true;
 
-            refTabPolicyBtn = CreateButton(refTabBar.transform, "TabPol", "Policy v4.2", new Color(0.945f, 0.918f, 0.865f, 1f), 20f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(0); }, new Color(0.16f, 0.14f, 0.12f));
-            refTabPolicyBtn.GetComponentInChildren<Text>().fontSize = 10;
-            refTabRegistryBtn = CreateButton(refTabBar.transform, "TabReg", "WHOIS & EU", new Color(0.22f, 0.20f, 0.18f, 1f), 20f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(1); }, new Color(0.80f, 0.76f, 0.70f));
-            refTabRegistryBtn.GetComponentInChildren<Text>().fontSize = 10;
-            refTabRulesBtn = CreateButton(refTabBar.transform, "TabRul", "Rulebook", new Color(0.22f, 0.20f, 0.18f, 1f), 20f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(2); }, new Color(0.80f, 0.76f, 0.70f));
-            refTabRulesBtn.GetComponentInChildren<Text>().fontSize = 10;
-            Button resetPosBtn = CreateButton(refTabBar.transform, "ResetPos", "↺", new Color(0.26f, 0.23f, 0.20f, 1f), 20f, () =>
+            refTabPolicyBtn = CreateButton(refTabBar.transform, "TabPol", "Policy v4.2", new Color(0.945f, 0.918f, 0.865f, 1f), 22f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(0); }, new Color(0.16f, 0.14f, 0.12f));
+            refTabPolicyBtn.GetComponentInChildren<Text>().fontSize = 11;
+            refTabRegistryBtn = CreateButton(refTabBar.transform, "TabReg", "WHOIS & EU", new Color(0.22f, 0.20f, 0.18f, 1f), 22f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(1); }, new Color(0.80f, 0.76f, 0.70f));
+            refTabRegistryBtn.GetComponentInChildren<Text>().fontSize = 11;
+            refTabRulesBtn = CreateButton(refTabBar.transform, "TabRul", "Rulebook", new Color(0.22f, 0.20f, 0.18f, 1f), 22f, () => { SoundManager.Instance?.Play("paper_rustle", 0.5f); SelectReferenceTab(2); }, new Color(0.80f, 0.76f, 0.70f));
+            refTabRulesBtn.GetComponentInChildren<Text>().fontSize = 11;
+            Button resetPosBtn = CreateButton(refTabBar.transform, "ResetPos", "↺", new Color(0.26f, 0.23f, 0.20f, 1f), 22f, () =>
             {
                 SoundManager.Instance?.Play("paper_rustle", 0.45f);
-                if (blogDocRect != null) blogDocRect.anchoredPosition = new Vector2(-246f, 6f);
-                if (policyDocRect != null) policyDocRect.anchoredPosition = new Vector2(246f, 0f);
-                if (registryDocRect != null) registryDocRect.anchoredPosition = new Vector2(246f, 0f);
-                if (rulesDocRect != null) rulesDocRect.anchoredPosition = new Vector2(246f, 0f);
+                if (blogDocRect != null) blogDocRect.anchoredPosition = new Vector2(-246f, 0f);
+                if (policyDocRect != null) policyDocRect.anchoredPosition = new Vector2(246f, -12f);
+                if (registryDocRect != null) registryDocRect.anchoredPosition = new Vector2(246f, -12f);
+                if (rulesDocRect != null) rulesDocRect.anchoredPosition = new Vector2(246f, -12f);
             });
-            resetPosBtn.GetComponentInChildren<Text>().fontSize = 11;
-            resetPosBtn.GetComponent<LayoutElement>().flexibleWidth = 0.35f;
+            resetPosBtn.GetComponentInChildren<Text>().fontSize = 12;
+            resetPosBtn.GetComponent<LayoutElement>().flexibleWidth = 0.28f;
 
-            // Adaptive DHLI hint ribbon along bottom-left (warm espresso)
-            RectTransform modeStrip = CreatePanel(deskArea, "ModeHint", new Color(0.18f, 0.16f, 0.145f, 1f), raycast: false, rounded: false);
-            modeStrip.anchorMin = new Vector2(0.008f, 0f); modeStrip.anchorMax = new Vector2(0.70f, 0f); modeStrip.pivot = new Vector2(0f, 0f);
-            modeStrip.sizeDelta = new Vector2(0f, 22f); modeStrip.anchoredPosition = new Vector2(0f, 3f);
-            browserModeHintText = CreateText(modeStrip, "MHT", "", 10, new Color(0.88f, 0.84f, 0.76f), TextAnchor.MiddleLeft);
-            SetFill(browserModeHintText.GetComponent<RectTransform>(), 8, 1);
+            // No cluttered bottom hint bar!
+            browserModeHintText = null;
 
-            // LEFT WINDOW: ILLUSTRATED REAL WEBSITE / SOCIAL POST / CONSPIRACY BLOG (warm editorial paper!)
-            blogDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Blog", new Vector2(-246f, 6f), new Vector2(478f, 304f),
-                new Color(0.965f, 0.955f, 0.935f, 1f), new Color(0.32f, 0.36f, 0.42f, 1f),
-                new Color(0.14f, 0.16f, 0.20f, 1f), "VITAPULSE HEALTH  •  Official Support Portal");
+            // LEFT WINDOW: CLEAN ILLUSTRATED WEBSITE / SOCIAL POST / BLOG (spacious, draggable!)
+            blogDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Blog", new Vector2(-246f, 0f), new Vector2(478f, 336f),
+                new Color(0.975f, 0.968f, 0.952f, 1f), new Color(0.32f, 0.30f, 0.28f, 1f),
+                new Color(0.16f, 0.15f, 0.14f, 1f), "VITAPULSE HEALTH");
             leftDocHeaderText = blogDocRect.Find("HdrBar/HdrTxt")?.GetComponent<Text>();
 
-            // Realistic Page Masthead Strip
-            RectTransform masthead = CreatePanel(blogDocRect, "PageMasthead", new Color(0.11f, 0.34f, 0.32f, 0.16f), raycast: false, rounded: false);
-            masthead.sizeDelta = new Vector2(0f, 18f);
+            // Single slim Masthead Strip
+            RectTransform masthead = CreatePanel(blogDocRect, "PageMasthead", new Color(0.11f, 0.34f, 0.32f, 0.14f), raycast: false, rounded: false);
+            masthead.sizeDelta = new Vector2(0f, 20f);
             leftMastheadBg = masthead.GetComponent<Image>();
-            leftMastheadText = CreateText(masthead, "MastTxt", "<b>🔒 vitapulse.com/faq</b>", 9, new Color(0.10f, 0.34f, 0.30f), TextAnchor.MiddleLeft);
+            leftMastheadText = CreateText(masthead, "MastTxt", "<b>🔒 vitapulse.com/faq</b>", 10, new Color(0.10f, 0.34f, 0.30f), TextAnchor.MiddleLeft);
             SetFill(leftMastheadText.GetComponent<RectTransform>(), 8, 1);
 
-            // Visual Hero Banner Illustration (Medical Portal / Social Reel / Conspiracy Blog Graphic!)
+            // Hero Banner Graphic
             GameObject heroGo = new GameObject("HeroBanner");
             heroGo.transform.SetParent(blogDocRect, false);
-            heroGo.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 46f);
+            heroGo.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 52f);
             leftHeroBannerImg = heroGo.AddComponent<RawImage>();
             leftHeroBannerImg.texture = heroBannerFaqTex;
             leftHeroBannerImg.raycastTarget = false;
@@ -1385,7 +1370,7 @@ namespace HealthFiles
             for (int i = 0; i < leftClaimButtons.Length; i++)
             {
                 int idx = i;
-                float rowH = (i == 0) ? 30f : 26f;
+                float rowH = (i == 0) ? 34f : 29f;
                 Button pBtn = CreateButton(blogDocRect, $"Claim_{i}", "", new Color(1f, 1f, 1f, 0.01f), rowH, () => OnLeftClaimClicked(idx), new Color(0.12f, 0.13f, 0.15f));
                 ColorBlock cb = pBtn.colors;
                 cb.normalColor = Color.white;
@@ -1394,15 +1379,15 @@ namespace HealthFiles
                 pBtn.colors = cb;
                 Text t = pBtn.GetComponentInChildren<Text>();
                 t.alignment = TextAnchor.MiddleLeft;
-                t.fontSize = (i == 0) ? 13 : 10;
+                t.fontSize = (i == 0) ? 13 : 11;
                 leftClaimButtons[i] = pBtn;
                 leftClaimLabels[i] = t;
                 leftClaimBgs[i] = pBtn.GetComponent<Image>();
             }
 
-            // Realistic Website/Blog Footer Engagement & Comments Strip
-            RectTransform footBar = CreatePanel(blogDocRect, "PageFooter", new Color(0.88f, 0.86f, 0.82f, 0.85f), raycast: false, rounded: false);
-            footBar.sizeDelta = new Vector2(0f, 18f);
+            // Realistic Website/Blog Footer Engagement Strip
+            RectTransform footBar = CreatePanel(blogDocRect, "PageFooter", new Color(0.89f, 0.87f, 0.83f, 0.85f), raycast: false, rounded: false);
+            footBar.sizeDelta = new Vector2(0f, 20f);
             leftFooterEngagementText = CreateText(footBar, "FootTxt", "", 9, new Color(0.32f, 0.30f, 0.28f), TextAnchor.MiddleLeft);
             SetFill(leftFooterEngagementText.GetComponent<RectTransform>(), 8, 1);
 
@@ -1420,26 +1405,25 @@ namespace HealthFiles
             bigStampOverlayObj = stampOverlay.gameObject;
             bigStampOverlayObj.SetActive(false);
 
-            // RIGHT WINDOW: WARM EDITORIAL ARCHIVAL CASE BINDER (matches office parchment, legal pad & manila dossier!)
+            // RIGHT WINDOW: CLEAN WARM ARCHIVAL CASE BINDER (spacious, larger 12pt text!)
             Color binderPaper  = new Color(0.945f, 0.918f, 0.865f, 1f);
             Color binderBorder = new Color(0.62f, 0.55f, 0.44f, 1f);
-            Color binderHdr    = new Color(0.49f, 0.15f, 0.16f, 1f); // Refined burgundy dossier header
 
-            rulesDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Rules", new Vector2(246f, 0f), new Vector2(478f, 250f),
-                binderPaper, binderBorder, new Color(0.36f, 0.27f, 0.16f, 1f), "OFFICIAL RULEBOOK  •  VERIFICATION STANDARDS");
+            rulesDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Rules", new Vector2(246f, -12f), new Vector2(478f, 304f),
+                binderPaper, binderBorder, new Color(0.36f, 0.27f, 0.16f, 1f), "RULEBOOK");
 
-            registryDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Registry", new Vector2(246f, 0f), new Vector2(478f, 250f),
-                binderPaper, binderBorder, binderHdr, "WHOIS &amp; EU HEALTH REGISTRY  •  LIVE RECORD");
+            registryDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Registry", new Vector2(246f, -12f), new Vector2(478f, 304f),
+                binderPaper, binderBorder, new Color(0.49f, 0.15f, 0.16f, 1f), "WHOIS &amp; EU REGISTRY");
 
-            policyDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Policy", new Vector2(246f, 0f), new Vector2(478f, 250f),
-                binderPaper, binderBorder, new Color(0.16f, 0.34f, 0.27f, 1f), "VITAPULSE PRIVACY POLICY v4.2  •  LEGAL BRIEF");
+            policyDocRect = CreateDraggableDeskPaper(deskArea, "Doc_Policy", new Vector2(246f, -12f), new Vector2(478f, 304f),
+                binderPaper, binderBorder, new Color(0.16f, 0.34f, 0.27f, 1f), "PRIVACY POLICY v4.2");
 
             for (int r = 0; r < rightClues.Length; r++)
             {
                 int rIdx = r;
                 RectTransform targetDoc = rightClues[r].docGroup == 0 ? policyDocRect
                     : (rightClues[r].docGroup == 1 ? registryDocRect : rulesDocRect);
-                float btnH = rightClues[r].docGroup == 0 ? 64f : 84f;
+                float btnH = rightClues[r].docGroup == 0 ? 78f : 108f;
                 Button rBtn = CreateButton(targetDoc, $"Clue_{r}", rightClues[r].label, new Color(0.88f, 0.84f, 0.76f, 0.35f), btnH, () => OnRightClueClicked(rIdx), new Color(0.16f, 0.14f, 0.12f));
                 ColorBlock rcb = rBtn.colors;
                 rcb.normalColor = Color.white;
@@ -1448,14 +1432,14 @@ namespace HealthFiles
                 rBtn.colors = rcb;
                 Text t = rBtn.GetComponentInChildren<Text>();
                 t.alignment = TextAnchor.MiddleLeft;
-                t.fontSize = 11;
+                t.fontSize = 12;
                 rightClueButtons[r] = rBtn;
                 rightClueLabels[r] = t;
                 rightClueBgs[r] = rBtn.GetComponent<Image>();
             }
 
             // Red Detective Thread Line (connects Left Mismatch <-> Right Proof on match!)
-            RectTransform threadRt = CreatePanel(deskArea, "RedThreadLine", new Color(0.92f, 0.24f, 0.24f, 0.95f), raycast: false, rounded: false);
+            RectTransform threadRt = CreatePanel(deskArea, "RedThreadLine", new Color(0.86f, 0.20f, 0.20f, 0.95f), raycast: false, rounded: false);
             threadRt.anchorMin = new Vector2(0.5f, 0.5f); threadRt.anchorMax = new Vector2(0.5f, 0.5f); threadRt.pivot = new Vector2(0.5f, 0.5f);
             threadRt.sizeDelta = new Vector2(100f, 3.5f);
             redThreadRect = threadRt;
@@ -1463,22 +1447,18 @@ namespace HealthFiles
 
             SelectReferenceTab(0);
 
-            // Yellow Detective Sticky Note neatly tucked in bottom-right corner
-            RectTransform stickyNote = CreatePanel(deskArea, "BookcaseStickyNote", new Color(0.14f, 0.18f, 0.22f, 0.96f), raycast: false, rounded: true);
-            Outline stOut = stickyNote.gameObject.AddComponent<Outline>();
-            stOut.effectColor = new Color(0.85f, 0.74f, 0.44f, 0.65f);
-            stOut.effectDistance = new Vector2(1f, -1f);
-            stickyNote.anchorMin = new Vector2(0.71f, 0f); stickyNote.anchorMax = new Vector2(0.992f, 0f); stickyNote.pivot = new Vector2(1f, 0f);
-            stickyNote.sizeDelta = new Vector2(0f, 44f); stickyNote.anchoredPosition = new Vector2(0f, 3f);
-            bookcaseStickyText = CreateText(stickyNote, "StickyTxt",
-                "<b>[BOOKCASE TIP]</b> Read <i>Myths</i> or <i>Privacy 101</i> (Right Wall ►) for +5 DHLI!",
-                9, new Color(0.92f, 0.90f, 0.84f), TextAnchor.MiddleLeft);
-            SetFill(bookcaseStickyText.GetComponent<RectTransform>(), 7, 3);
+            // Yellow Detective Sticky Note (hidden until unlocked from Bookcase — zero idle clutter!)
+            RectTransform stickyNote = CreatePanel(deskArea, "BookcaseStickyNote", new Color(0.98f, 0.91f, 0.48f, 0.96f), raycast: false, rounded: true);
+            stickyNote.anchorMin = new Vector2(1f, 0f); stickyNote.anchorMax = new Vector2(1f, 0f); stickyNote.pivot = new Vector2(1f, 0f);
+            stickyNote.sizeDelta = new Vector2(220f, 44f); stickyNote.anchoredPosition = new Vector2(-10f, 8f);
+            stickyNote.localRotation = Quaternion.Euler(0f, 0f, -2f);
+            bookcaseStickyText = CreateText(stickyNote, "StickyTxt", "", 10, new Color(0.22f, 0.17f, 0.06f), TextAnchor.MiddleLeft);
+            SetFill(bookcaseStickyText.GetComponent<RectTransform>(), 8, 4);
             bookcaseStickyObj = stickyNote.gameObject;
-            bookcaseStickyObj.SetActive(true);
+            bookcaseStickyObj.SetActive(false);
 
-            // Single clean live feedback line (bright readable on dark OS window!)
-            computerFeedbackText = CreateText(gameBox.transform, "PCFb", "Inspect File 1/3 against DHIO Terminal — if everything checks out, stamp VERIFIED!", 11, new Color(0.86f, 0.92f, 0.96f), TextAnchor.MiddleLeft);
+            // Single clean live feedback line
+            computerFeedbackText = CreateText(gameBox.transform, "PCFb", "", 11, new Color(0.92f, 0.89f, 0.82f), TextAnchor.MiddleLeft);
             computerFeedbackText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 18f);
             stampStatusText = null;
 
