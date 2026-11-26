@@ -130,6 +130,8 @@ namespace HealthFiles
         private Text bookTitleBanner;
         private Text bookLeftPageText;
         private Text bookRightPageText;
+        private Text bookLeftPageNumText;
+        private Text bookRightPageNumText;
         private Text bookPageCounterText;
         private Button bookPrevBtn;
         private Button bookNextBtn;
@@ -250,6 +252,8 @@ namespace HealthFiles
 
             SyncDeskClipboardVisualToLegalPad();
             EnhanceAlexEnvelopeClickability();
+            PolishMainMenuOverlay();
+            PolishBookshelfVisuals();
 
             if (modalBackdrop != null) modalBackdrop.SetActive(true);
             welcomePanel.SetActive(true);
@@ -984,19 +988,277 @@ namespace HealthFiles
             // keep sculpted envelope transform untouched so WP2 art stays 100% aligned.
         }
 
+        /// <summary>
+        /// WP3 Runtime Polish for WP2's MainMenuOverlay (zero edits to WP2's Scripts/Office/):
+        /// 1. Fixes the overflowing VolSlider Fill RectTransform bug cleanly (sleek rounded burgundy bar + knob).
+        /// 2. Adds cinematic warm vignette backdrop, soft drop shadows & rounded corners to all menu cards/buttons.
+        /// </summary>
+        private void PolishMainMenuOverlay()
+        {
+            GameObject menuCanvas = GameObject.Find("MainMenu_Overlay_Canvas");
+            if (menuCanvas == null) return;
+
+            Transform blocker = menuCanvas.transform.Find("TransparentBlocker");
+            if (blocker != null)
+            {
+                // Replace flat gray tint with a rich cinematic left-to-right warm vignette gradient!
+                Image bImg = blocker.GetComponent<Image>();
+                if (bImg != null) bImg.color = new Color(0.06f, 0.05f, 0.04f, 0.01f);
+
+                GameObject vigGo = new GameObject("CinematicVignette");
+                vigGo.transform.SetParent(blocker, false);
+                vigGo.transform.SetAsFirstSibling();
+                SetFill(vigGo.AddComponent<RectTransform>(), 0f, 0f);
+                RawImage vigRaw = vigGo.AddComponent<RawImage>();
+                vigRaw.texture = CreateMenuVignetteTexture();
+                vigRaw.raycastTarget = false;
+            }
+
+            // Round & add soft drop shadows to all 3 Main Menu cards
+            foreach (string cardName in new[] { "MainMenuDossierCard", "SettingsDossierCard", "ControlsDossierCard" })
+            {
+                Transform cardTf = blocker != null ? blocker.Find(cardName) : null;
+                if (cardTf == null) continue;
+
+                Image cardImg = cardTf.GetComponent<Image>();
+                if (cardImg != null && roundedSprite != null)
+                {
+                    cardImg.sprite = roundedSprite;
+                    cardImg.type = Image.Type.Sliced;
+                    cardImg.pixelsPerUnitMultiplier = 2f;
+                    cardImg.color = new Color(0.93f, 0.90f, 0.84f, 0.96f); // Warm, airy editorial parchment
+                }
+
+                Shadow sh = cardTf.gameObject.GetComponent<Shadow>() ?? cardTf.gameObject.AddComponent<Shadow>();
+                sh.effectColor = new Color(0.05f, 0.03f, 0.02f, 0.38f);
+                sh.effectDistance = new Vector2(8f, -10f);
+
+                // Round all buttons inside each card cleanly
+                foreach (Button btn in cardTf.GetComponentsInChildren<Button>(true))
+                {
+                    Image bImg = btn.GetComponent<Image>();
+                    if (bImg != null && pillSprite != null)
+                    {
+                        bImg.sprite = pillSprite;
+                        bImg.type = Image.Type.Sliced;
+                        bImg.pixelsPerUnitMultiplier = 2f;
+                    }
+                }
+            }
+
+            // Hide unnecessary filler tip/footer text lines on Main Menu, Settings & Controls cards
+            foreach (string fillerPath in new[]
+            {
+                "ControlsDossierCard/ControlsCol/CTip",
+                "SettingsDossierCard/SettingsCol/SNote",
+                "MainMenuDossierCard/MenuCol/Footer"
+            })
+            {
+                Transform fillerTf = blocker != null ? blocker.Find(fillerPath) : null;
+                if (fillerTf != null) fillerTf.gameObject.SetActive(false);
+            }
+
+            // Fix the overflowing green VolSlider Fill bar cleanly!
+            Transform volSliderTf = blocker != null ? blocker.Find("SettingsDossierCard/SettingsCol/VolSlider") : null;
+            if (volSliderTf != null)
+            {
+                Slider sl = volSliderTf.GetComponent<Slider>();
+                Transform bgTf = volSliderTf.Find("Bg");
+                if (bgTf != null)
+                {
+                    Image bgImg = bgTf.GetComponent<Image>();
+                    if (bgImg != null)
+                    {
+                        bgImg.color = new Color(0.78f, 0.73f, 0.65f, 1f);
+                        if (pillSprite != null) { bgImg.sprite = pillSprite; bgImg.type = Image.Type.Sliced; bgImg.pixelsPerUnitMultiplier = 2f; }
+                    }
+                }
+
+                Transform fillTf = volSliderTf.Find("FillArea/Fill");
+                if (fillTf != null)
+                {
+                    RectTransform fRt = fillTf.GetComponent<RectTransform>();
+                    fRt.anchorMin = Vector2.zero;
+                    fRt.anchorMax = Vector2.one;
+                    fRt.offsetMin = Vector2.zero;
+                    fRt.offsetMax = Vector2.zero;
+                    fRt.sizeDelta = Vector2.zero;
+
+                    Image fImg = fillTf.GetComponent<Image>();
+                    if (fImg != null)
+                    {
+                        fImg.color = AccentBurgundy; // Refined burgundy ink instead of overflowing green!
+                        if (pillSprite != null) { fImg.sprite = pillSprite; fImg.type = Image.Type.Sliced; fImg.pixelsPerUnitMultiplier = 2f; }
+                    }
+                }
+
+                Transform handleTf = volSliderTf.Find("HandleArea/Handle");
+                if (handleTf != null)
+                {
+                    RectTransform hRt = handleTf.GetComponent<RectTransform>();
+                    hRt.sizeDelta = new Vector2(18f, 18f);
+                    Image hImg = handleTf.GetComponent<Image>();
+                    if (hImg != null)
+                    {
+                        hImg.color = InkPrimary;
+                        if (roundedSprite != null) { hImg.sprite = roundedSprite; hImg.type = Image.Type.Sliced; hImg.pixelsPerUnitMultiplier = 2.5f; }
+                    }
+                }
+
+                // Ensure Master Volume % label is crisp & synced with SoundManager too
+                Transform volLblTf = blocker.Find("SettingsDossierCard/SettingsCol/VolLbl");
+                Text volLbl = volLblTf != null ? volLblTf.GetComponent<Text>() : null;
+                if (volLbl != null)
+                {
+                    volLbl.fontSize = 15;
+                    volLbl.color = InkPrimary;
+                    volLbl.text = $"Master Volume:  <b>{Mathf.RoundToInt(AudioListener.volume * 100f)}%</b>";
+                }
+
+                // Force Slider to recompute fill & handle geometry immediately
+                if (sl != null)
+                {
+                    sl.onValueChanged.AddListener(v =>
+                    {
+                        SoundManager.Instance?.SetMasterVolume(v);
+                        if (volLbl != null) volLbl.text = $"Master Volume:  <b>{Mathf.RoundToInt(v * 100f)}%</b>";
+                    });
+                    float cur = sl.value;
+                    sl.SetValueWithoutNotify(cur > 0.5f ? cur - 0.001f : cur + 0.001f);
+                    sl.SetValueWithoutNotify(cur);
+                }
+            }
+        }
+
+        private static Texture2D CreateMenuVignetteTexture()
+        {
+            const int w = 256, h = 144;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+
+            for (int y = 0; y < h; y++)
+            {
+                float ny = (y / (float)(h - 1)) * 2f - 1f;
+                for (int x = 0; x < w; x++)
+                {
+                    float fx = x / (float)(w - 1);
+                    float nx = fx * 2f - 1f;
+                    // Smooth warm left-side cinema scrim + gentle edge vignette so 3D office glows cleanly on the right
+                    float leftScrim = Mathf.SmoothStep(0.58f, 0.06f, fx * 1.35f);
+                    float edgeVig = Mathf.Clamp01((nx * nx * 0.45f + ny * ny * 0.65f) - 0.30f) * 0.42f;
+                    float alpha = Mathf.Clamp01(leftScrim + edgeVig);
+                    tex.SetPixel(x, y, new Color(0.08f, 0.065f, 0.055f, alpha));
+                }
+            }
+            tex.Apply();
+            return tex;
+        }
+
         private void RefreshBookSpread()
         {
             if (activeBookSpreads == null || activeBookSpreads.Length == 0) return;
             BookSpread sp = activeBookSpreads[activeSpreadIndex];
             bookLeftPageText.text = sp.leftPage;
             bookRightPageText.text = sp.rightPage;
-            bookPageCounterText.text = $"Spread {activeSpreadIndex + 1} / {activeBookSpreads.Length}";
+            int leftNum = activeSpreadIndex * 2 + 1;
+            int rightNum = activeSpreadIndex * 2 + 2;
+            if (bookLeftPageNumText != null) bookLeftPageNumText.text = $"—  {leftNum}  —";
+            if (bookRightPageNumText != null) bookRightPageNumText.text = $"—  {rightNum}  —";
+            bookPageCounterText.text = $"Pages {leftNum}–{rightNum}  /  {activeBookSpreads.Length * 2}";
             bookPrevBtn.interactable = activeSpreadIndex > 0;
             bookNextBtn.interactable = activeSpreadIndex < activeBookSpreads.Length - 1;
 
             bool hasSticky = !string.IsNullOrEmpty(sp.stickyNote);
             stickyNoteObj.SetActive(hasSticky);
             if (hasSticky) stickyNoteText.text = sp.stickyNote;
+        }
+
+        /// <summary>
+        /// Applies a subtle clothbound book-linen texture to 3D bookshelf books at runtime (zero edits to WP2 assets!).
+        /// </summary>
+        private static void PolishBookshelfVisuals()
+        {
+            Texture2D clothTex = CreateBookClothTexture();
+            Renderer[] allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            foreach (Renderer r in allRenderers)
+            {
+                if (r == null || r.sharedMaterial == null) continue;
+                string n = r.gameObject.name;
+                if (n.IndexOf("Book", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    (n.IndexOf("Spine", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     n.IndexOf("Cover", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    Material inst = r.material; // runtime instance only!
+                    inst.mainTexture = clothTex;
+                    if (inst.HasProperty("_Smoothness")) inst.SetFloat("_Smoothness", 0.16f);
+                }
+            }
+        }
+
+        private static Texture2D CreateBookClothTexture()
+        {
+            const int s = 64;
+            Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    // Fine woven buckram book-cloth grain
+                    float weave = ((x % 2 == 0) ? 0.03f : -0.02f) + ((y % 3 == 0) ? 0.025f : -0.015f);
+                    float noise = (((x * 31 + y * 17) % 13) - 6) * 0.004f;
+                    float v = Mathf.Clamp01(0.95f + weave + noise);
+                    tex.SetPixel(x, y, new Color(v, v, v, 1f));
+                }
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        private static Texture2D CreateOpenBookPageTexture(bool isLeftPage)
+        {
+            const int w = 256, h = 320;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+
+            Color paperBase = new Color(0.962f, 0.938f, 0.882f, 1f);
+            Color gutterDark = new Color(0.68f, 0.62f, 0.52f, 1f);
+            Color edgeStack = new Color(0.84f, 0.79f, 0.70f, 1f);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float fx = x / (float)(w - 1);
+                    float grain = (((x * 29 + y * 13) % 17) - 8) * 0.0014f;
+                    Color c = new Color(paperBase.r + grain, paperBase.g + grain, paperBase.b + grain, 1f);
+
+                    // Curved center-spine gutter shadow (right side of left page, left side of right page!)
+                    float distFromSpine = isLeftPage ? (1f - fx) : fx;
+                    if (distFromSpine < 0.14f)
+                    {
+                        float t = 1f - (distFromSpine / 0.14f);
+                        c = Color.Lerp(c, gutterDark, t * t * 0.58f);
+                    }
+
+                    // Layered physical page-stack stripes along outer fore-edge!
+                    int distFromOuter = isLeftPage ? x : (w - 1 - x);
+                    if (distFromOuter < 10)
+                    {
+                        c = (distFromOuter % 2 == 0) ? edgeStack : Color.Lerp(paperBase, edgeStack, 0.45f);
+                    }
+
+                    // Subtle top & bottom page edge shadow
+                    if (y < 4 || y > h - 5) c = Color.Lerp(c, gutterDark, 0.18f);
+
+                    tex.SetPixel(x, y, c);
+                }
+            }
+            tex.Apply();
+            return tex;
         }
 
         private void SyncDeskClipboardVisualToLegalPad()
@@ -1294,40 +1556,98 @@ namespace HealthFiles
 
         private void BuildOpenBookModal(Transform parent)
         {
+            // Realistic Hardcover Book Backing with drop shadow & subtle gold-foil border
             RectTransform cover = CreatePanel(parent, "OpenBookModal", new Color(0.14f, 0.22f, 0.36f, 0.99f), raycast: true);
-            cover.anchorMin = new Vector2(0.11f, 0.13f); cover.anchorMax = new Vector2(0.89f, 0.87f);
+            cover.anchorMin = new Vector2(0.09f, 0.10f); cover.anchorMax = new Vector2(0.91f, 0.90f);
             cover.offsetMin = Vector2.zero; cover.offsetMax = Vector2.zero;
             bookCoverBorder = cover.GetComponent<Image>();
 
-            bookTitleBanner = CreateText(cover, "BookTitle", "BOOK", 18, new Color(1f, 0.90f, 0.55f), TextAnchor.MiddleCenter, false);
+            Shadow covShadow = cover.gameObject.AddComponent<Shadow>();
+            covShadow.effectColor = new Color(0f, 0f, 0f, 0.58f);
+            covShadow.effectDistance = new Vector2(10f, -12f);
+            Outline goldFoil = cover.gameObject.AddComponent<Outline>();
+            goldFoil.effectColor = new Color(0.78f, 0.65f, 0.36f, 0.72f);
+            goldFoil.effectDistance = new Vector2(2f, -2f);
+
+            bookTitleBanner = CreateText(cover, "BookTitle", "BOOK", 16, new Color(0.96f, 0.87f, 0.58f), TextAnchor.MiddleCenter, false);
+            if (headingFont != null) bookTitleBanner.font = headingFont;
             bookTitleBanner.fontStyle = FontStyle.Bold;
             RectTransform btRect = bookTitleBanner.GetComponent<RectTransform>();
             btRect.anchorMin = new Vector2(0f, 1f); btRect.anchorMax = new Vector2(1f, 1f); btRect.pivot = new Vector2(0.5f, 1f);
-            btRect.sizeDelta = new Vector2(0f, 34f); btRect.anchoredPosition = new Vector2(0f, -4f);
+            btRect.sizeDelta = new Vector2(0f, 32f); btRect.anchoredPosition = new Vector2(0f, -4f);
 
+            // Two-Page Open Spread with ZERO gap (joined at center spine crease!)
             GameObject pagesRow = new GameObject("PagesRow");
             pagesRow.transform.SetParent(cover, false);
             RectTransform prRect = pagesRow.AddComponent<RectTransform>();
             prRect.anchorMin = Vector2.zero; prRect.anchorMax = Vector2.one;
-            prRect.offsetMin = new Vector2(16f, 54f); prRect.offsetMax = new Vector2(-16f, -40f);
+            prRect.offsetMin = new Vector2(18f, 54f); prRect.offsetMax = new Vector2(-18f, -38f);
             HorizontalLayoutGroup pLay = pagesRow.AddComponent<HorizontalLayoutGroup>();
-            pLay.spacing = 6; pLay.childControlWidth = true; pLay.childForceExpandWidth = true;
+            pLay.spacing = 0; pLay.childControlWidth = true; pLay.childForceExpandWidth = true;
 
-            RectTransform leftPage = CreatePanel(pagesRow.transform, "LeftPage", PaperBase, raycast: false);
-            bookLeftPageText = CreateText(leftPage, "LeftTxt", "", 15, InkPrimary, TextAnchor.UpperLeft, false);
-            SetFill(bookLeftPageText.GetComponent<RectTransform>(), 24f, 22f);
+            // LEFT REALISTIC BOOK PAGE (curved spine gutter + fore-edge page stack!)
+            GameObject leftGo = new GameObject("LeftPage");
+            leftGo.transform.SetParent(pagesRow.transform, false);
+            RectTransform leftPage = leftGo.AddComponent<RectTransform>();
+            RawImage leftRaw = leftGo.AddComponent<RawImage>();
+            leftRaw.texture = CreateOpenBookPageTexture(isLeftPage: true);
+            leftRaw.raycastTarget = false;
 
-            RectTransform rightPage = CreatePanel(pagesRow.transform, "RightPage", PaperBase, raycast: false);
-            bookRightPageText = CreateText(rightPage, "RightTxt", "", 15, InkPrimary, TextAnchor.UpperLeft, false);
-            SetFill(bookRightPageText.GetComponent<RectTransform>(), 24f, 22f);
+            bookLeftPageText = CreateText(leftPage, "LeftTxt", "", 15, new Color(0.14f, 0.12f, 0.10f), TextAnchor.UpperLeft, false);
+            if (headingFont != null) bookLeftPageText.font = headingFont;
+            bookLeftPageText.lineSpacing = 1.20f;
+            RectTransform ltRt = bookLeftPageText.GetComponent<RectTransform>();
+            ltRt.anchorMin = Vector2.zero; ltRt.anchorMax = Vector2.one;
+            ltRt.offsetMin = new Vector2(36f, 36f); ltRt.offsetMax = new Vector2(-34f, -26f);
 
-            RectTransform sticky = CreatePanel(rightPage, "StickyNote", new Color(0.95f, 0.88f, 0.45f, 1f), raycast: false);
+            bookLeftPageNumText = CreateText(leftPage, "LeftNum", "—  1  —", 12, InkMuted, TextAnchor.LowerCenter, false);
+            if (headingFont != null) bookLeftPageNumText.font = headingFont;
+            RectTransform lnRt = bookLeftPageNumText.GetComponent<RectTransform>();
+            lnRt.anchorMin = new Vector2(0f, 0f); lnRt.anchorMax = new Vector2(1f, 0f); lnRt.pivot = new Vector2(0.5f, 0f);
+            lnRt.sizeDelta = new Vector2(0f, 24f); lnRt.anchoredPosition = new Vector2(0f, 10f);
+
+            // RIGHT REALISTIC BOOK PAGE (curved spine gutter + fore-edge page stack!)
+            GameObject rightGo = new GameObject("RightPage");
+            rightGo.transform.SetParent(pagesRow.transform, false);
+            RectTransform rightPage = rightGo.AddComponent<RectTransform>();
+            RawImage rightRaw = rightGo.AddComponent<RawImage>();
+            rightRaw.texture = CreateOpenBookPageTexture(isLeftPage: false);
+            rightRaw.raycastTarget = false;
+
+            bookRightPageText = CreateText(rightPage, "RightTxt", "", 15, new Color(0.14f, 0.12f, 0.10f), TextAnchor.UpperLeft, false);
+            if (headingFont != null) bookRightPageText.font = headingFont;
+            bookRightPageText.lineSpacing = 1.20f;
+            RectTransform rtRt = bookRightPageText.GetComponent<RectTransform>();
+            rtRt.anchorMin = Vector2.zero; rtRt.anchorMax = Vector2.one;
+            rtRt.offsetMin = new Vector2(34f, 36f); rtRt.offsetMax = new Vector2(-36f, -26f);
+
+            bookRightPageNumText = CreateText(rightPage, "RightNum", "—  2  —", 12, InkMuted, TextAnchor.LowerCenter, false);
+            if (headingFont != null) bookRightPageNumText.font = headingFont;
+            RectTransform rnRt = bookRightPageNumText.GetComponent<RectTransform>();
+            rnRt.anchorMin = new Vector2(0f, 0f); rnRt.anchorMax = new Vector2(1f, 0f); rnRt.pivot = new Vector2(0.5f, 0f);
+            rnRt.sizeDelta = new Vector2(0f, 24f); rnRt.anchoredPosition = new Vector2(0f, 10f);
+
+            // Center Spine Binding Crease + Crimson Silk Ribbon Bookmark!
+            RectTransform spineCrease = CreatePanel(cover, "SpineCrease", new Color(0.18f, 0.14f, 0.10f, 0.65f), raycast: false, rounded: false);
+            spineCrease.anchorMin = new Vector2(0.5f, 0f); spineCrease.anchorMax = new Vector2(0.5f, 1f); spineCrease.pivot = new Vector2(0.5f, 0.5f);
+            spineCrease.offsetMin = new Vector2(-1.5f, 54f); spineCrease.offsetMax = new Vector2(1.5f, -38f);
+
+            RectTransform ribbon = CreatePanel(cover, "SilkBookmark", new Color(0.62f, 0.13f, 0.15f, 0.94f), raycast: false, rounded: false);
+            ribbon.anchorMin = new Vector2(0.5f, 1f); ribbon.anchorMax = new Vector2(0.5f, 1f); ribbon.pivot = new Vector2(0.5f, 1f);
+            ribbon.sizeDelta = new Vector2(14f, 128f); ribbon.anchoredPosition = new Vector2(6f, -34f);
+            ribbon.localRotation = Quaternion.Euler(0f, 0f, -2.5f);
+
+            // Handwritten Yellow Sticky Note with drop shadow
+            RectTransform sticky = CreatePanel(rightPage, "StickyNote", new Color(0.97f, 0.90f, 0.48f, 1f), raycast: false, rounded: false);
+            Shadow stShadow = sticky.gameObject.AddComponent<Shadow>();
+            stShadow.effectColor = new Color(0f, 0f, 0f, 0.28f);
+            stShadow.effectDistance = new Vector2(4f, -5f);
             sticky.anchorMin = new Vector2(1f, 0f); sticky.anchorMax = new Vector2(1f, 0f); sticky.pivot = new Vector2(1f, 0f);
-            sticky.sizeDelta = new Vector2(280f, 108f);
-            sticky.anchoredPosition = new Vector2(-18f, 16f);
-            sticky.localRotation = Quaternion.Euler(0f, 0f, -3.5f);
-            stickyNoteText = CreateText(sticky, "StickyTxt", "", 13, new Color(0.22f, 0.18f, 0.08f), TextAnchor.UpperLeft, false);
-            stickyNoteText.fontStyle = FontStyle.Italic;
+            sticky.sizeDelta = new Vector2(286f, 114f);
+            sticky.anchoredPosition = new Vector2(-24f, 28f);
+            sticky.localRotation = Quaternion.Euler(0f, 0f, -2.8f);
+            stickyNoteText = CreateText(sticky, "StickyTxt", "", 14, new Color(0.18f, 0.15f, 0.08f), TextAnchor.UpperLeft, false);
+            if (handwritingFont != null) stickyNoteText.font = handwritingFont;
             SetFill(stickyNoteText.GetComponent<RectTransform>(), 12f, 10f);
             stickyNoteObj = sticky.gameObject;
 
@@ -1350,7 +1670,7 @@ namespace HealthFiles
                 }
             }, InkPrimary);
 
-            bookPageCounterText = CreateText(navRow.transform, "PageCounter", "Spread 1 / 2", 14, PaperWhite, TextAnchor.MiddleCenter, false);
+            bookPageCounterText = CreateText(navRow.transform, "PageCounter", "Pages 1–2 / 4", 13, new Color(0.96f, 0.90f, 0.72f), TextAnchor.MiddleCenter, false);
 
             bookNextBtn = CreateButton(navRow.transform, "NextPage", "Next ►", PaperBtn, 34f, () =>
             {
@@ -1362,7 +1682,7 @@ namespace HealthFiles
                 }
             }, InkPrimary);
 
-            CreateButton(navRow.transform, "CloseBook", "Close", AccentBurgundy, 34f, () =>
+            CreateButton(navRow.transform, "CloseBook", "Close Book", AccentBurgundy, 34f, () =>
             {
                 SoundManager.Instance?.Play("paper_rustle", 0.6f);
                 bookModalPanel.SetActive(false);
