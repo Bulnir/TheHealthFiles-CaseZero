@@ -25,6 +25,7 @@ namespace HealthFiles
         private Font uiFont;
         private Font headingFont;
         private Font monoFont;
+        private Font handwritingFont;
         private Sprite roundedSprite;
         private Sprite pillSprite;
         private readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>();
@@ -149,8 +150,11 @@ namespace HealthFiles
         private Texture2D photocopyTexture;
         private int printerPullCount;
 
-        // Styled Physical Clipboard-in-Hand Modal (WP2)
+        // Styled Physical Clipboard-in-Hand & Alex's Handwritten Letter Modals
         private GameObject clipboardModalPanel;
+        private GameObject deskClipboard3D;
+        private GameObject alexLetterModalPanel;
+        private readonly HashSet<string> bonusBooksRead = new HashSet<string>();
 
         // OBJECTION! Splash
         private GameObject objectionSplashPanel;
@@ -170,6 +174,7 @@ namespace HealthFiles
             uiFont = LoadBestFont(new[] { "Segoe UI", "Calibri", "Helvetica Neue", "Arial" }, 14, fallback);
             headingFont = LoadBestFont(new[] { "Georgia", "Palatino Linotype", "Cambria", "Times New Roman" }, 22, uiFont);
             monoFont = LoadBestFont(new[] { "Consolas", "Courier New", "Menlo" }, 13, uiFont);
+            handwritingFont = LoadBestFont(new[] { "Ink Free", "Segoe Script", "Bradley Hand ITC", "Gabriola", "Georgia" }, 18, headingFont);
 
             roundedSprite = CreateRoundedSprite(128, 28);
             pillSprite = CreateRoundedSprite(64, 12);
@@ -242,6 +247,9 @@ namespace HealthFiles
                 SoundManager.Instance.OnAudioSettingsChanged += RefreshAudioUI;
                 RefreshAudioUI();
             }
+
+            SyncDeskClipboardVisualToLegalPad();
+            EnhanceAlexEnvelopeClickability();
 
             if (modalBackdrop != null) modalBackdrop.SetActive(true);
             welcomePanel.SetActive(true);
@@ -354,7 +362,8 @@ namespace HealthFiles
                 (docModalPanel != null && docModalPanel.activeSelf) ||
                 (bookModalPanel != null && bookModalPanel.activeSelf) ||
                 (printerJamModal != null && printerJamModal.activeSelf) ||
-                (clipboardModalPanel != null && clipboardModalPanel.activeSelf);
+                (clipboardModalPanel != null && clipboardModalPanel.activeSelf) ||
+                (alexLetterModalPanel != null && alexLetterModalPanel.activeSelf);
 
             if (CameraViewpointController.Instance != null)
             {
@@ -376,6 +385,8 @@ namespace HealthFiles
             if (bookModalPanel != null) bookModalPanel.SetActive(false);
             if (printerJamModal != null) printerJamModal.SetActive(false);
             if (clipboardModalPanel != null) clipboardModalPanel.SetActive(false);
+            if (alexLetterModalPanel != null) alexLetterModalPanel.SetActive(false);
+            if (deskClipboard3D != null) deskClipboard3D.SetActive(true);
             ClipboardPickupAnimator.Instance?.SetHeld(false);
             if (inventoryDrawer != null) inventoryDrawer.SetActive(false);
             if (dhliDrawer != null) dhliDrawer.SetActive(false);
@@ -571,6 +582,7 @@ namespace HealthFiles
         {
             if (string.IsNullOrEmpty(msg) || toastBanner == null) return;
             toastText.text = msg;
+            toastBanner.transform.SetAsLastSibling();
             toastBanner.SetActive(true);
             if (toastRoutine != null) StopCoroutine(toastRoutine);
             toastRoutine = StartCoroutine(HideToastAfter(4.5f));
@@ -696,7 +708,43 @@ namespace HealthFiles
 
             if (allowObjection && EvidenceManager.Instance != null)
             {
-                CreateText(objectionButtonContainer, "ObjHdr", "<b>PRESENT EVIDENCE:</b>", 13, AccentBurgundy, TextAnchor.MiddleLeft, false);
+                // Stage 1: Ace Attorney-style Press / Interrogate row
+                Text pressHdr = CreateText(objectionButtonContainer, "PressHdr", "<b>INTERROGATE ALEX (PRESS FOR DETAILS):</b>", 12, AccentOchre, TextAnchor.MiddleLeft, false);
+                pressHdr.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 18f);
+
+                GameObject pressRow = new GameObject("PressRow");
+                pressRow.transform.SetParent(objectionButtonContainer, false);
+                pressRow.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 32f);
+                HorizontalLayoutGroup pLay = pressRow.AddComponent<HorizontalLayoutGroup>();
+                pLay.spacing = 8; pLay.childControlWidth = true; pLay.childForceExpandWidth = true;
+                pLay.childControlHeight = true; pLay.childForceExpandHeight = true;
+
+                CreateButton(pressRow.transform, "PressAuthorBtn", "Ask: Who wrote the blog?", PaperBtn, 30f, () =>
+                {
+                    SoundManager.Instance?.Play("ui_click", 0.55f);
+                    string hintLine = DialogueManager.Instance != null
+                        ? DialogueManager.Instance.GetLine("alex", "hint")
+                        : "I don't know the author, but they're the only one saying things are true. Big sites just echo what the companies tell them to.";
+                    StopActiveSpeech();
+                    typewriterRoutine = StartCoroutine(TypeTextWithVoiceRoutine(phoneBodyText, hintLine, "alex"));
+                    phoneFeedbackText.color = AccentOchre;
+                    phoneFeedbackText.text = "<b>INVESTIGATOR NOTE:</b> Alex cannot name the author or sources. Present your verified Audit evidence to challenge the blog!";
+                }, InkPrimary);
+
+                CreateButton(pressRow.transform, "PressDistrustBtn", "Ask: Why distrust official docs?", PaperBtn, 30f, () =>
+                {
+                    SoundManager.Instance?.Play("ui_click", 0.55f);
+                    const string skepticLine = "Big health sites just repeat whatever companies pay them to say! Why trust official pages when this whistleblower blog already exposed them?";
+                    StopActiveSpeech();
+                    typewriterRoutine = StartCoroutine(TypeTextWithVoiceRoutine(phoneBodyText, skepticLine, "alex"));
+                    phoneFeedbackText.color = AccentOchre;
+                    phoneFeedbackText.text = "<b>INVESTIGATOR NOTE:</b> Confirmation bias detected! Don't argue blindly — slam <b>OBJECTION!</b> with verifiable proof.";
+                }, InkPrimary);
+
+                // Stage 2: Present Evidence (OBJECTION!)
+                Text objHdr = CreateText(objectionButtonContainer, "ObjHdr", "<b>PRESENT EVIDENCE:</b>", 12, AccentBurgundy, TextAnchor.MiddleLeft, false);
+                objHdr.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 18f);
+
                 foreach (EvidenceItem item in EvidenceManager.Instance.CollectedEvidence)
                 {
                     EvidenceItem captured = item;
@@ -705,7 +753,7 @@ namespace HealthFiles
                         $"Present_{item.id}",
                         $"OBJECTION!  {item.title}",
                         AccentBurgundy,
-                        36f,
+                        32f,
                         () => OnPresentEvidenceClicked(captured.id),
                         PaperWhite
                     );
@@ -797,6 +845,7 @@ namespace HealthFiles
                     "<i>\"Okay... maybe a blog agreeing with my suspicions isn't proof on its own. " +
                     "Still, I'm glad you pinned Section 4.2 — we need to know who those third-party partners really are!\"</i>\n\n" +
                     $"<b>INVESTIGATOR RANK:  <color=#7D2629>{rank.ToUpper()}</color></b>\n" +
+                    $"<color=#5A4F42>DHLI Comparison — Alex's Reliability: <b>4/12 (Low)</b>  vs  Yours: <b><color=#{relHex}>{pm.reliabilityScore}/100</color></b></color>\n" +
                     $"•  Evaluating Reliability:  <b><color=#{relHex}>{pm.reliabilityScore}/100 [{PersonalizationManager.GetLevelLabel(pm.reliabilityScore)}]</color></b>\n" +
                     $"•  Protecting Privacy:      <b><color=#{privHex}>{pm.privacyScore}/100 [{PersonalizationManager.GetLevelLabel(pm.privacyScore)}]</color></b>\n" +
                     $"•  Digital Navigation:      <b><color=#{navHex}>{pm.navigationScore}/100 [{PersonalizationManager.GetLevelLabel(pm.navigationScore)}]</color></b>\n\n" +
@@ -846,7 +895,7 @@ namespace HealthFiles
                         new BookSpread {
                             leftPage = "<b>CHAPTER 1: THE THREE GOLDEN CHECKS</b>\n\nEvery viral health claim must pass three independent checks before you draw a conclusion:\n\n<b>1. SOURCE</b>\nWho wrote or funded this? Are they an identifiable clinician, institution, or an anonymous blog?",
                             rightPage = "<b>2. EVIDENCE</b>\nIs there peer-reviewed clinical proof or official documentation—or just emotional testimonials?\n\n<b>3. CONTEXT</b>\nWere dates, disclaimers, or privacy policy wording cut out to exaggerate a headline?",
-                            stickyNote = "Supervisor's Sticky Note:\n'Welcome aboard, rookie! Keep this in your Evidence drawer—Alex is already blowing up the phone!'"
+                            stickyNote = "Supervisor's Sticky Note:\n'Welcome aboard, rookie! Alex is already calling!\nP.S. Check \"101 Viral Health Myths\" & \"Digital Privacy 101\" right next to me on this bookcase for +5 DHLI & PC Audit tips!'"
                         },
                         new BookSpread {
                             leftPage = "<b>CHAPTER 2: UNDERSTANDING DHLI</b>\n\nDigital Health Literacy isn't just knowing how to use a smartphone.\n\nA person can be 12/12 at searching online yet still struggle to judge whether a health blog is reliable (like Alex) or whether an app's permissions are safe (like Sofia).",
@@ -864,7 +913,7 @@ namespace HealthFiles
                         new BookSpread {
                             leftPage = "<b>MYTH #14: 'MILLIONS OF VIEWS = MEDICAL PROOF'</b>\n\nSocial media algorithms reward shocking headlines and emotional personal stories—not scientific accuracy.\n\nHigh engagement measures <b>attention</b>, never clinical effectiveness.",
                             rightPage = "<b>SPOTTING SPONSORED CONTENT</b>\n\nInfluencers often share glowing personal stories while linked to paid promotional agreements.\n\nAlways check older posts, affiliate links, and commercial disclosures before trusting a review.",
-                            stickyNote = "Yellow Sticky Note (penciled in):\n'Reminder for Case 02: Tell Sofia that 4 million TikTok likes is NOT an FDA clinical trial!'"
+                            stickyNote = "★ +5 RELIABILITY BONUS — Tip pinned to PC Desk!\n'Watch for promo codes (hidden ads!) and check WHOIS & EU Registry!'"
                         },
                         new BookSpread {
                             leftPage = "<b>MYTH #42: 'DOCTORS DON'T WANT YOU TO KNOW THIS!'</b>\n\nHeadlines that trigger distrust of institutions often exploit <b>confirmation bias</b>—telling readers what they already suspect.",
@@ -882,7 +931,7 @@ namespace HealthFiles
                         new BookSpread {
                             leftPage = "<b>THE PRINCIPLE OF DATA MINIMIZATION</b>\n\nBefore tapping 'Allow All' on a health app, ask one simple question:\n\n<i>Does this app's stated feature genuinely require this permission to work?</i>",
                             rightPage = "<b>EXAMPLE: PERSONAL HEALTH DIARY</b>\n\n• <b>Needed:</b> User-entered health notes\n• <b>Unnecessary:</b> Contacts list, continuous precise GPS location, background Microphone access.\n\nGrant only what is strictly necessary!",
-                            stickyNote = "Neon Sticky Note:\n'If a free calorie tracker asks for your microphone and contacts... maybe it's tracking more than calories!'"
+                            stickyNote = "★ +5 PRIVACY BONUS — Tip pinned to PC Desk!\n'Check Policy v4.2 dates & Section 4.2 — vague sharing ≠ proven data sale!'"
                         },
                         new BookSpread {
                             leftPage = "<b>READING PRIVACY POLICIES</b>\n\nWatch for vague phrases like:\n<i>'Some information may be shared with third-party partners.'</i>\n\nVague wording is a real privacy red flag—even if it doesn't automatically prove illegal data sales.",
@@ -916,6 +965,34 @@ namespace HealthFiles
             AnimateModalPopIn(bookModalPanel);
             SyncModalLock();
             RefreshBookSpread();
+
+            // Bookcase Research Bonus: reading optional reference books awards +5 DHLI & unlocks a PC Audit sticky note!
+            if ((bookKey == "myths" || bookKey == "privacy") && bonusBooksRead.Add(bookKey))
+            {
+                DhliDomain dom = bookKey == "myths" ? DhliDomain.Reliability : DhliDomain.Privacy;
+                PersonalizationManager.Instance?.RecordCorrectAction(dom, 5);
+                WorldSpaceMonitorOS.Instance?.UnlockBookcaseBonusNote(bookKey);
+                ShowToast(bookKey == "myths"
+                    ? "★ Bookcase Research Bonus (+5 Reliability)! Detective Sticky Note added to your PC Audit desk."
+                    : "★ Bookcase Research Bonus (+5 Privacy)! Policy 4.2 Sticky Note added to your PC Audit desk.");
+            }
+        }
+
+        private static void EnhanceAlexEnvelopeClickability()
+        {
+            GameObject env = GameObject.Find("AlexHiddenEnvelope");
+            if (env == null) return;
+
+            // Lift the yellow envelope slightly higher & tilt it toward the player so it peeks clearly out of Drawer B-02
+            env.transform.localPosition = new Vector3(0.08f, -0.045f, 0f);
+            env.transform.localRotation = Quaternion.Euler(0f, 8f, -14f);
+
+            BoxCollider col = env.GetComponent<BoxCollider>();
+            if (col != null)
+            {
+                col.size = new Vector3(0.48f, 0.28f, 0.52f);
+                col.center = new Vector3(0.04f, 0.08f, 0f);
+            }
         }
 
         private void RefreshBookSpread()
@@ -933,21 +1010,147 @@ namespace HealthFiles
             if (hasSticky) stickyNoteText.text = sp.stickyNote;
         }
 
+        private void SyncDeskClipboardVisualToLegalPad()
+        {
+            if (ClipboardPickupAnimator.Instance == null) return;
+            deskClipboard3D = ClipboardPickupAnimator.Instance.gameObject;
+            Transform root = deskClipboard3D.transform;
+
+            Transform paperMesh = root.Find("LogPaper");
+            if (paperMesh != null)
+            {
+                Renderer rend = paperMesh.GetComponent<Renderer>();
+                if (rend != null)
+                {
+                    rend.material.color = new Color(0.965f, 0.915f, 0.675f, 1f);
+                }
+            }
+
+            Transform worldCanvasTf = root.Find("ClipboardPaperTextCanvas");
+            if (worldCanvasTf == null) return;
+
+            for (int i = worldCanvasTf.childCount - 1; i >= 0; i--)
+            {
+                Destroy(worldCanvasTf.GetChild(i).gameObject);
+            }
+
+            GameObject padBg = new GameObject("DeskLegalPadBg");
+            padBg.transform.SetParent(worldCanvasTf, false);
+            SetFill(padBg.AddComponent<RectTransform>(), 0f, 0f);
+            RawImage raw = padBg.AddComponent<RawImage>();
+            raw.texture = CreateLinedLegalPadTexture();
+            raw.raycastTarget = false;
+
+            Text hdr = CreateText(padBg.transform, "DeskPadHdr", "Mail Delivery Log — Archive", 42, new Color(0.14f, 0.20f, 0.36f), TextAnchor.MiddleLeft, false);
+            if (handwritingFont != null) hdr.font = handwritingFont;
+            hdr.fontStyle = FontStyle.Bold;
+            RectTransform hRt = hdr.GetComponent<RectTransform>();
+            hRt.anchorMin = new Vector2(0f, 1f); hRt.anchorMax = new Vector2(1f, 1f); hRt.pivot = new Vector2(0.5f, 1f);
+            hRt.offsetMin = new Vector2(96f, -108f); hRt.offsetMax = new Vector2(-24f, -12f);
+
+            Text body = CreateText(padBg.transform, "DeskPadBody",
+                "Filing Cabinet (left wall):\n\n" +
+                "•  Drawer B-01 (Top)\n" +
+                "    old 2023 office receipts\n\n" +
+                "<color=#961C1C>★  Drawer B-02 (Middle) — URGENT!</color>\n" +
+                "<color=#961C1C>    A. Moretti — Yellow Envelope</color>\n" +
+                "    (VitaPulse blog allegations)\n\n" +
+                "•  Drawer B-03 (Bottom)\n" +
+                "    blank intake forms",
+                36, new Color(0.13f, 0.19f, 0.34f), TextAnchor.UpperLeft, false);
+            if (handwritingFont != null) body.font = handwritingFont;
+            body.lineSpacing = 1.15f;
+            RectTransform bRt = body.GetComponent<RectTransform>();
+            bRt.anchorMin = Vector2.zero; bRt.anchorMax = Vector2.one;
+            bRt.offsetMin = new Vector2(96f, 24f); bRt.offsetMax = new Vector2(-24f, -122f);
+        }
+
         private void OpenMailLogModal()
         {
             CloseAllModals();
-            ClipboardPickupAnimator.Instance?.SetHeld(true);
+            if (deskClipboard3D != null) deskClipboard3D.SetActive(false);
             clipboardModalPanel.SetActive(true);
-            AnimateModalPopIn(clipboardModalPanel);
+            StartCoroutine(LiftClipboardFromBottomRoutine(clipboardModalPanel.GetComponent<RectTransform>()));
             SyncModalLock();
         }
 
-        private void OpenAlexLetterModal() => OpenDocModal(
-            "ALEX'S LETTER (letter_alex)",
-            "From: Alex Moretti\n\n" +
-            "<b>\"VitaPulse is selling everyone's private medical information!\"</b>\n\n" +
-            "Blog URL unlocked in HealthBrowser on your 3D Monitor:\n<i>http://truth-health-watch.blog/vitapulse-exposed</i>"
-        );
+        private static IEnumerator LiftClipboardFromBottomRoutine(RectTransform rt)
+        {
+            if (rt == null) yield break;
+            const float duration = 0.24f;
+            float elapsed = 0f;
+            Vector2 startPos = new Vector2(0f, -520f);
+            Vector2 endPos = Vector2.zero;
+            Quaternion startRot = Quaternion.Euler(0f, 0f, -7f);
+            Quaternion endRot = Quaternion.Euler(0f, 0f, -1.2f);
+            rt.anchoredPosition = startPos;
+            rt.localRotation = startRot;
+            rt.localScale = Vector3.one;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float eased = 1f - Mathf.Pow(1f - t, 3f);
+                rt.anchoredPosition = Vector2.Lerp(startPos, endPos, eased);
+                rt.localRotation = Quaternion.Slerp(startRot, endRot, eased);
+                yield return null;
+            }
+            rt.anchoredPosition = endPos;
+            rt.localRotation = endRot;
+        }
+
+        private static Texture2D CreateLinedLegalPadTexture()
+        {
+            const int w = 512, h = 640;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+
+            Color baseYellow = new Color(0.965f, 0.915f, 0.675f, 1f); // Classic pale yellow legal pad
+            Color ruleBlue = new Color(0.56f, 0.72f, 0.84f, 0.65f);   // Soft blue horizontal lines
+            Color marginRed = new Color(0.84f, 0.36f, 0.36f, 0.58f);  // Classic red vertical margin rule
+            Color topBand = new Color(0.92f, 0.86f, 0.58f, 1f);       // Slightly warmer top header area
+
+            Color[] px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                bool isTopHeader = y > h - 76;
+                bool isBlueLine = !isTopHeader && (y % 30 == 0) && y > 18;
+                bool isDoubleHeaderLine = (y == h - 76 || y == h - 80);
+
+                for (int x = 0; x < w; x++)
+                {
+                    // Subtle warm paper fiber grain
+                    float grain = (((x * 37 + y * 17) % 19) - 9) * 0.0014f;
+                    Color c = isTopHeader ? topBand : baseYellow;
+                    c = new Color(c.r + grain, c.g + grain, c.b + grain, 1f);
+
+                    if (isBlueLine || isDoubleHeaderLine)
+                    {
+                        c = Color.Lerp(c, ruleBlue, ruleBlue.a);
+                    }
+                    if (x == 62 || x == 66)
+                    {
+                        c = Color.Lerp(c, marginRed, marginRed.a);
+                    }
+                    px[y * w + x] = c;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
+        }
+
+        private void OpenAlexLetterModal()
+        {
+            CloseAllModals();
+            if (alexLetterModalPanel == null) return;
+            SoundManager.Instance?.Play("paper_rustle", 0.7f);
+            alexLetterModalPanel.SetActive(true);
+            StartCoroutine(LiftClipboardFromBottomRoutine(alexLetterModalPanel.GetComponent<RectTransform>()));
+            SyncModalLock();
+        }
 
         private void OpenDocModal(string title, string body)
         {
@@ -1094,6 +1297,7 @@ namespace HealthFiles
             BuildOpenBookModal(canvasGo.transform);
             BuildPrinterJamModal(canvasGo.transform);
             BuildClipboardModal(canvasGo.transform);
+            BuildAlexLetterModal(canvasGo.transform);
             BuildDocModal(canvasGo.transform);
             BuildPauseModal(canvasGo.transform);
             BuildObjectionSplash(canvasGo.transform);
@@ -1349,57 +1553,166 @@ namespace HealthFiles
             printerJamModal.SetActive(false);
         }
 
-        // === PHYSICAL WOODEN CLIPBOARD MODAL (WP2) ===
+        // === REALISTIC HAND-HELD YELLOW LINED LEGAL PAD ON WOODEN CLIPBOARD ===
         private void BuildClipboardModal(Transform parent)
         {
-            RectTransform board = CreatePanel(parent, "ClipboardModal", new Color(0.36f, 0.22f, 0.12f, 0.99f), raycast: true);
-            board.anchorMin = new Vector2(0.31f, 0.10f); board.anchorMax = new Vector2(0.69f, 0.90f);
+            // Warm walnut wooden clipboard backing with soft drop shadow
+            RectTransform board = CreatePanel(parent, "ClipboardModal", new Color(0.32f, 0.20f, 0.11f, 0.99f), raycast: true);
+            board.anchorMin = new Vector2(0.30f, 0.10f); board.anchorMax = new Vector2(0.70f, 0.90f);
             board.offsetMin = Vector2.zero; board.offsetMax = Vector2.zero;
+            Shadow boardShadow = board.gameObject.AddComponent<Shadow>();
+            boardShadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            boardShadow.effectDistance = new Vector2(8f, -10f);
 
-            RectTransform metalClip = CreatePanel(board, "MetalClip", new Color(0.64f, 0.68f, 0.74f, 1f), raycast: false);
+            // Brushed metallic spring clip at top center
+            RectTransform metalClip = CreatePanel(board, "MetalClip", new Color(0.62f, 0.65f, 0.70f, 1f), raycast: false);
             metalClip.anchorMin = new Vector2(0.5f, 1f); metalClip.anchorMax = new Vector2(0.5f, 1f); metalClip.pivot = new Vector2(0.5f, 1f);
-            metalClip.sizeDelta = new Vector2(150f, 34f); metalClip.anchoredPosition = new Vector2(0f, -6f);
+            metalClip.sizeDelta = new Vector2(164f, 36f); metalClip.anchoredPosition = new Vector2(0f, -6f);
+            RectTransform clipClamp = CreatePanel(metalClip, "ClipClamp", new Color(0.46f, 0.49f, 0.54f, 1f), raycast: false);
+            clipClamp.anchorMin = new Vector2(0.18f, 0.18f); clipClamp.anchorMax = new Vector2(0.82f, 0.68f);
+            clipClamp.offsetMin = Vector2.zero; clipClamp.offsetMax = Vector2.zero;
 
-            RectTransform paper = CreatePanel(board, "ClipboardPaper", PaperBase, raycast: false);
+            // Real pale-yellow blue-ruled red-margin legal pad sheet!
+            GameObject padGo = new GameObject("YellowLegalPad");
+            padGo.transform.SetParent(board, false);
+            RectTransform paper = padGo.AddComponent<RectTransform>();
             paper.anchorMin = Vector2.zero; paper.anchorMax = Vector2.one;
-            paper.offsetMin = new Vector2(22f, 62f); paper.offsetMax = new Vector2(-22f, -34f);
+            paper.offsetMin = new Vector2(20f, 58f); paper.offsetMax = new Vector2(-20f, -34f);
+            RawImage padImg = padGo.AddComponent<RawImage>();
+            padImg.texture = CreateLinedLegalPadTexture();
+            padImg.raycastTarget = false;
 
-            RectTransform hdrBand = CreatePanel(paper, "PaperHeader", AccentBurgundy, raycast: false);
-            hdrBand.anchorMin = new Vector2(0f, 1f); hdrBand.anchorMax = new Vector2(1f, 1f); hdrBand.pivot = new Vector2(0.5f, 1f);
-            hdrBand.sizeDelta = new Vector2(0f, 44f); hdrBand.anchoredPosition = Vector2.zero;
-            Text hdrTxt = CreateText(hdrBand, "HT", "MAIL DELIVERY LOG — ARCHIVE INDEX", 15, PaperWhite, TextAnchor.MiddleCenter, false);
+            // Handwritten header on top margin
+            Text hdrTxt = CreateText(paper, "PadHeader", "Mail Delivery Log  —  Archive Notes", 20, new Color(0.14f, 0.20f, 0.36f), TextAnchor.MiddleLeft, false);
+            if (handwritingFont != null) hdrTxt.font = handwritingFont;
             hdrTxt.fontStyle = FontStyle.Bold;
-            SetFill(hdrTxt.GetComponent<RectTransform>(), 8f, 4f);
+            RectTransform hRt = hdrTxt.GetComponent<RectTransform>();
+            hRt.anchorMin = new Vector2(0f, 1f); hRt.anchorMax = new Vector2(1f, 1f); hRt.pivot = new Vector2(0.5f, 1f);
+            hRt.sizeDelta = new Vector2(0f, 52f); hRt.anchoredPosition = new Vector2(0f, -6f);
+            hRt.offsetMin = new Vector2(68f, -58f); hRt.offsetMax = new Vector2(-18f, -6f);
 
-            Text bodyTxt = CreateText(paper, "ClipboardBody",
-                "<b>FILING CABINET (LEFT WALL):</b>\n" +
-                "──────────────────────────────────\n\n" +
-                "<b>• Drawer B-01 (Top)</b>\n" +
-                "   Old 2023 Office Receipts\n\n" +
-                "<color=#7D2629><b>• Drawer B-02 (Middle)  ★ PRIORITY</b></color>\n" +
-                "   <b>A. MORETTI — Yellow Envelope</b>\n" +
-                "   <i>Subject: VitaPulse Blog Allegations</i>\n\n" +
-                "<b>• Drawer B-03 (Bottom)</b>\n" +
-                "   Blank Intake Forms & Stationery\n\n" +
-                "<i>Tip: Turn Left (◄) to the Archive Cabinet, slide open Drawer B-02, and collect Alex's yellow envelope!</i>",
-                14, InkPrimary, TextAnchor.UpperLeft, false);
+            // Handwritten ballpoint ink notes aligned to the left red margin!
+            Text bodyTxt = CreateText(paper, "PadNotes",
+                "Filing Cabinet (left wall):\n\n" +
+                "•  Drawer B-01 (Top)\n" +
+                "    old 2023 office receipts\n\n" +
+                "<color=#961C1C>★  Drawer B-02 (Middle)  —  URGENT!</color>\n" +
+                "<color=#961C1C>    A. Moretti — Yellow Envelope</color>\n" +
+                "    (VitaPulse blog allegations)\n\n" +
+                "•  Drawer B-03 (Bottom)\n" +
+                "    blank intake forms\n\n" +
+                "<i>Note to self: turn left (◄), open B-02\n" +
+                "and grab Alex's envelope!</i>",
+                17, new Color(0.13f, 0.19f, 0.34f), TextAnchor.UpperLeft, false);
+            if (handwritingFont != null) bodyTxt.font = handwritingFont;
+            bodyTxt.lineSpacing = 1.12f;
             RectTransform bRt = bodyTxt.GetComponent<RectTransform>();
             bRt.anchorMin = Vector2.zero; bRt.anchorMax = Vector2.one;
-            bRt.offsetMin = new Vector2(24f, 16f); bRt.offsetMax = new Vector2(-24f, -58f);
+            bRt.offsetMin = new Vector2(68f, 16f); bRt.offsetMax = new Vector2(-18f, -66f);
 
-            Button putDownBtn = CreateButton(board, "PutDownClipboard", "Put Down", PaperBtn, 40f, () =>
+            Button putDownBtn = CreateButton(board, "PutDownClipboard", "Put Notepad Down", PaperBtn, 38f, () =>
             {
                 SoundManager.Instance?.Play("paper_rustle", 0.65f);
                 clipboardModalPanel.SetActive(false);
-                ClipboardPickupAnimator.Instance?.SetHeld(false);
+                if (deskClipboard3D != null) deskClipboard3D.SetActive(true);
                 SyncModalLock();
             }, InkPrimary);
             RectTransform pdRect = putDownBtn.GetComponent<RectTransform>();
-            pdRect.anchorMin = new Vector2(0.14f, 0f); pdRect.anchorMax = new Vector2(0.86f, 0f); pdRect.pivot = new Vector2(0.5f, 0f);
-            pdRect.sizeDelta = new Vector2(0f, 40f); pdRect.anchoredPosition = new Vector2(0f, 12f);
+            pdRect.anchorMin = new Vector2(0.18f, 0f); pdRect.anchorMax = new Vector2(0.82f, 0f); pdRect.pivot = new Vector2(0.5f, 0f);
+            pdRect.sizeDelta = new Vector2(0f, 38f); pdRect.anchoredPosition = new Vector2(0f, 12f);
 
             clipboardModalPanel = board.gameObject;
             clipboardModalPanel.SetActive(false);
+        }
+
+        // === HAND-HELD YELLOW ENVELOPE & HANDWRITTEN LETTER FROM ALEX MORETTI ===
+        private void BuildAlexLetterModal(Transform parent)
+        {
+            // Kraft-yellow manila envelope backing with shadow
+            RectTransform envelope = CreatePanel(parent, "AlexLetterModal", new Color(0.84f, 0.71f, 0.42f, 0.99f), raycast: true);
+            AddSubtleBorder(envelope.gameObject, new Color(0.55f, 0.44f, 0.22f, 1f));
+            envelope.anchorMin = new Vector2(0.24f, 0.10f); envelope.anchorMax = new Vector2(0.76f, 0.90f);
+            envelope.offsetMin = Vector2.zero; envelope.offsetMax = Vector2.zero;
+            Shadow envShadow = envelope.gameObject.AddComponent<Shadow>();
+            envShadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            envShadow.effectDistance = new Vector2(8f, -10f);
+
+            // Top envelope flap strip
+            RectTransform envFlap = CreatePanel(envelope, "EnvFlap", new Color(0.76f, 0.62f, 0.34f, 1f), raycast: false, rounded: false);
+            envFlap.anchorMin = new Vector2(0f, 1f); envFlap.anchorMax = new Vector2(1f, 1f); envFlap.pivot = new Vector2(0.5f, 1f);
+            envFlap.sizeDelta = new Vector2(0f, 44f); envFlap.anchoredPosition = Vector2.zero;
+            Text envTxt = CreateText(envFlap, "EnvLbl", "MANILA ENVELOPE  •  DRAWER B-02  •  EVIDENCE #letter_alex", 11, new Color(0.28f, 0.20f, 0.08f), TextAnchor.MiddleLeft, false);
+            envTxt.fontStyle = FontStyle.Bold;
+            SetFill(envTxt.GetComponent<RectTransform>(), 16f, 4f);
+
+            // Red priority rubber-stamp badge on envelope corner
+            RectTransform stamp = CreatePanel(envFlap, "UrgentStamp", new Color(0.74f, 0.14f, 0.14f, 0.92f), raycast: false);
+            stamp.anchorMin = new Vector2(1f, 0.5f); stamp.anchorMax = new Vector2(1f, 0.5f); stamp.pivot = new Vector2(1f, 0.5f);
+            stamp.sizeDelta = new Vector2(138f, 24f); stamp.anchoredPosition = new Vector2(-12f, 0f);
+            stamp.localRotation = Quaternion.Euler(0f, 0f, -3.5f);
+            Text stTxt = CreateText(stamp, "StTxt", "URGENT CITIZEN TIP", 10, PaperWhite, TextAnchor.MiddleCenter, false);
+            stTxt.fontStyle = FontStyle.Bold;
+            SetFill(stTxt.GetComponent<RectTransform>(), 4f, 2f);
+
+            // Folded cream stationery sheet pulled out of the envelope
+            RectTransform sheet = CreatePanel(envelope, "LetterSheet", new Color(0.97f, 0.945f, 0.875f, 1f), raycast: false);
+            AddSubtleBorder(sheet.gameObject, new Color(0.70f, 0.63f, 0.50f, 0.9f));
+            sheet.anchorMin = Vector2.zero; sheet.anchorMax = Vector2.one;
+            sheet.offsetMin = new Vector2(22f, 60f); sheet.offsetMax = new Vector2(-22f, -48f);
+            sheet.localRotation = Quaternion.Euler(0f, 0f, 0.8f);
+
+            // Subtle horizontal paper-fold crease across middle of sheet
+            RectTransform crease = CreatePanel(sheet, "FoldCrease", new Color(0.68f, 0.62f, 0.50f, 0.28f), raycast: false, rounded: false);
+            crease.anchorMin = new Vector2(0.02f, 0.50f); crease.anchorMax = new Vector2(0.98f, 0.50f);
+            crease.sizeDelta = new Vector2(0f, 2f);
+
+            // Postmark & sender header
+            Text postmark = CreateText(sheet, "Postmark", "MILAN HEALTH OFFICE  •  DELIVERED THIS MORNING\nFROM: ALEX MORETTI (22, RESEARCHER)", 11, InkMuted, TextAnchor.UpperLeft, false);
+            if (monoFont != null) postmark.font = monoFont;
+            RectTransform pmRt = postmark.GetComponent<RectTransform>();
+            pmRt.anchorMin = new Vector2(0f, 1f); pmRt.anchorMax = new Vector2(1f, 1f); pmRt.pivot = new Vector2(0.5f, 1f);
+            pmRt.offsetMin = new Vector2(24f, -54f); pmRt.offsetMax = new Vector2(-24f, -14f);
+
+            // Handwritten letter body
+            Text letterBody = CreateText(sheet, "LetterBody",
+                "To the Digital Health Investigator,\n\n" +
+                "Nobody listens when I warn them, so I'm sending this directly to your desk.\n\n" +
+                "<color=#961C1C><b>\"VitaPulse is secretly selling everyone's private medical information!\"</b></color>\n\n" +
+                "I stayed up all night researching it. Everyone keeps repeating corporate PR, " +
+                "but I found an independent blog that finally exposes what's really going on.\n\n" +
+                "Check the link on your computer — don't let them sweep this under the rug!\n\n" +
+                "<i>— Alex Moretti</i>",
+                17, new Color(0.14f, 0.18f, 0.30f), TextAnchor.UpperLeft, false);
+            if (handwritingFont != null) letterBody.font = handwritingFont;
+            letterBody.lineSpacing = 1.12f;
+            RectTransform lbRt = letterBody.GetComponent<RectTransform>();
+            lbRt.anchorMin = Vector2.zero; lbRt.anchorMax = Vector2.one;
+            lbRt.offsetMin = new Vector2(26f, 76f); lbRt.offsetMax = new Vector2(-26f, -64f);
+
+            // Highlighted URL slip clipped to the bottom of the letter
+            RectTransform urlSlip = CreatePanel(sheet, "UrlSlip", new Color(0.95f, 0.91f, 0.72f, 1f), raycast: false);
+            AddSubtleBorder(urlSlip.gameObject, AccentOchre);
+            urlSlip.anchorMin = new Vector2(0.05f, 0f); urlSlip.anchorMax = new Vector2(0.95f, 0f); urlSlip.pivot = new Vector2(0.5f, 0f);
+            urlSlip.sizeDelta = new Vector2(0f, 54f); urlSlip.anchoredPosition = new Vector2(0f, 14f);
+            Text urlTxt = CreateText(urlSlip, "UrlTxt",
+                "<b>BLOG LINK UNLOCKED IN HEALTHBROWSER (3D MONITOR):</b>\n<color=#7D2629>http://truth-health-watch.blog/vitapulse-exposed</color>",
+                12, InkPrimary, TextAnchor.MiddleCenter, false);
+            if (monoFont != null) urlTxt.font = monoFont;
+            SetFill(urlTxt.GetComponent<RectTransform>(), 10f, 6f);
+
+            Button keepBtn = CreateButton(envelope, "KeepAlexLetterBtn", "Keep Letter as Evidence (Close)", AccentSage, 38f, () =>
+            {
+                SoundManager.Instance?.Play("paper_rustle", 0.65f);
+                alexLetterModalPanel.SetActive(false);
+                SyncModalLock();
+            }, PaperWhite);
+            keepBtn.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+            RectTransform kbRt = keepBtn.GetComponent<RectTransform>();
+            kbRt.anchorMin = new Vector2(0.16f, 0f); kbRt.anchorMax = new Vector2(0.84f, 0f); kbRt.pivot = new Vector2(0.5f, 0f);
+            kbRt.sizeDelta = new Vector2(0f, 38f); kbRt.anchoredPosition = new Vector2(0f, 12f);
+
+            alexLetterModalPanel = envelope.gameObject;
+            alexLetterModalPanel.SetActive(false);
         }
 
         private void BuildEvidenceDrawer(Transform parent)
@@ -1824,11 +2137,11 @@ namespace HealthFiles
         {
             RectTransform modal = CreatePanel(parent, "PhoneModal", PaperBase, raycast: true);
             AddSubtleBorder(modal.gameObject, PaperBorder);
-            modal.anchorMin = new Vector2(0.16f, 0.15f); modal.anchorMax = new Vector2(0.84f, 0.85f);
+            modal.anchorMin = new Vector2(0.15f, 0.08f); modal.anchorMax = new Vector2(0.85f, 0.92f);
             modal.offsetMin = Vector2.zero; modal.offsetMax = Vector2.zero;
 
             VerticalLayoutGroup lay = modal.gameObject.AddComponent<VerticalLayoutGroup>();
-            lay.padding = new RectOffset(24, 24, 18, 18); lay.spacing = 8;
+            lay.padding = new RectOffset(24, 24, 16, 16); lay.spacing = 7;
             lay.childControlHeight = false; lay.childForceExpandHeight = false;
 
             phoneSpeakerText = CreateText(modal, "Speaker", "TELEPHONE", 19, AccentBurgundy, TextAnchor.MiddleLeft, false);
@@ -1876,9 +2189,9 @@ namespace HealthFiles
 
             GameObject box = new GameObject("ObjBtns");
             box.transform.SetParent(modal, false);
-            box.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 142f);
+            box.AddComponent<RectTransform>().sizeDelta = new Vector2(0f, 224f);
             VerticalLayoutGroup bLay = box.AddComponent<VerticalLayoutGroup>();
-            bLay.spacing = 5; bLay.childControlHeight = false; bLay.childForceExpandHeight = false;
+            bLay.spacing = 4; bLay.childControlHeight = false; bLay.childForceExpandHeight = false;
             objectionButtonContainer = box.transform;
 
             CreateButton(modal, "HangUpBtn", "Hang Up", PaperBtn, 36f, () =>
