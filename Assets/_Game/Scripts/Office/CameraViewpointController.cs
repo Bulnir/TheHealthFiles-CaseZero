@@ -45,6 +45,9 @@ namespace HealthFiles
         private CameraViewpoint currentTarget;
         private float currentParallaxYaw;
         private float currentParallaxPitch;
+        private bool hasOverridePose;
+        private Vector3 overridePos;
+        private Quaternion overrideRot;
 
         /// <summary>
         /// Set true while a fullscreen modal (PC Desktop, Phone, Document) is open so camera stays rock-steady.
@@ -94,9 +97,12 @@ namespace HealthFiles
             if (currentTarget == null || cameraTransform == null)
                 return;
 
+            Vector3 desiredPos = hasOverridePose ? overridePos : currentTarget.transform.position;
+            Quaternion baseRot = hasOverridePose ? overrideRot : currentTarget.transform.rotation;
+
             cameraTransform.position = Vector3.Lerp(
                 cameraTransform.position,
-                currentTarget.transform.position,
+                desiredPos,
                 Time.deltaTime * moveSpeed
             );
 
@@ -110,8 +116,10 @@ namespace HealthFiles
                 Vector2 mPos = GetMousePosition();
                 float nx = Mathf.Clamp((mPos.x / Screen.width) * 2f - 1f, -1f, 1f);
                 float ny = Mathf.Clamp((mPos.y / Screen.height) * 2f - 1f, -1f, 1f);
-                targetYaw = nx * parallaxMaxYaw;
-                targetPitch = -ny * parallaxMaxPitch;
+                float maxYaw = (currentTarget.customParallaxMaxYaw > 0.1f) ? currentTarget.customParallaxMaxYaw : parallaxMaxYaw;
+                float scale = hasOverridePose ? 0.35f : 1f;
+                targetYaw = nx * maxYaw * scale;
+                targetPitch = -ny * parallaxMaxPitch * scale;
             }
 
             currentParallaxYaw = Mathf.Lerp(currentParallaxYaw, targetYaw, Time.deltaTime * parallaxSmooth);
@@ -119,7 +127,7 @@ namespace HealthFiles
 
             Quaternion desiredRot =
                 Quaternion.AngleAxis(currentParallaxYaw, Vector3.up) *
-                currentTarget.transform.rotation *
+                baseRot *
                 Quaternion.AngleAxis(currentParallaxPitch, Vector3.right);
 
             cameraTransform.rotation = Quaternion.Slerp(
@@ -215,6 +223,18 @@ namespace HealthFiles
             if (cam != null) cameraTransform = cam;
         }
 
+        public void SetTemporaryOverridePose(Vector3 pos, Quaternion rot)
+        {
+            hasOverridePose = true;
+            overridePos = pos;
+            overrideRot = rot;
+        }
+
+        public void ClearTemporaryOverridePose()
+        {
+            hasOverridePose = false;
+        }
+
         public void MoveToViewpoint(string viewpointId)
         {
             CameraViewpoint found = viewpoints.Find(v => v != null && v.viewpointId == viewpointId);
@@ -224,6 +244,7 @@ namespace HealthFiles
                 return;
             }
 
+            hasOverridePose = false;
             currentTarget = found;
             OnViewpointChanged?.Invoke(found);
         }

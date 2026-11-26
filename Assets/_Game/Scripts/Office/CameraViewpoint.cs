@@ -15,6 +15,9 @@ namespace HealthFiles
         [Tooltip("Human-readable label shown on the HUD navigation bar.")]
         public string displayName = "Desk";
 
+        [Tooltip("Optional custom horizontal mouse-look range (degrees) for this viewpoint. 0 = default (16 deg).")]
+        public float customParallaxMaxYaw = 0f;
+
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.cyan;
