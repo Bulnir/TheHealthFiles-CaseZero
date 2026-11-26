@@ -1387,27 +1387,26 @@ namespace HealthFiles
         // === INTERACTIVE PRINTER PAPER-JAM MINI-GAME (WP2) ===
         private void OpenPrinterJamModal()
         {
+            bool stillJammed = PrinterJamEffect.Instance != null && PrinterJamEffect.Instance.IsJammed;
+            if (!stillJammed)
+            {
+                SoundManager.Instance?.Play("ui_click", 0.55f);
+                ShowToast("Office Printer is online and ready (paper jam cleared — your rescued photocopy is pinned on the Cork Board!).");
+                return;
+            }
+
             CloseAllModals();
             printerJamModal.SetActive(true);
             AnimateModalPopIn(printerJamModal);
             SyncModalLock();
 
-            bool stillJammed = PrinterJamEffect.Instance == null || PrinterJamEffect.Instance.IsJammed;
-            if (stillJammed)
-            {
-                printerPullCount = 0;
-                printerJamPhaseObj.SetActive(true);
-                printerPhotocopyPhaseObj.SetActive(false);
-                jammedPaperRect.anchoredPosition = new Vector2(0f, -24f);
-                jammedPaperRect.localRotation = Quaternion.Euler(0f, 0f, -7f);
-                printerJamStatusText.text = "ERROR E-09: PAPER JAM IN OUTPUT TRAY!\nGrab & tug the stuck A4 sheet out of the rollers!";
-                printerPullBtnText.text = "PULL JAMMED PAPER!  (0 / 3)";
-            }
-            else
-            {
-                printerJamPhaseObj.SetActive(false);
-                printerPhotocopyPhaseObj.SetActive(true);
-            }
+            printerPullCount = 0;
+            printerJamPhaseObj.SetActive(true);
+            printerPhotocopyPhaseObj.SetActive(false);
+            jammedPaperRect.anchoredPosition = new Vector2(0f, -24f);
+            jammedPaperRect.localRotation = Quaternion.Euler(0f, 0f, -7f);
+            printerJamStatusText.text = "ERROR E-09: PAPER JAM IN OUTPUT TRAY!\nGrab & tug the stuck A4 sheet out of the rollers!";
+            printerPullBtnText.text = "PULL JAMMED PAPER!  (0 / 3)";
         }
 
         private void OnPullJammedPaperClicked()
@@ -1533,13 +1532,6 @@ namespace HealthFiles
             HorizontalLayoutGroup pbLay = photoBtns.AddComponent<HorizontalLayoutGroup>();
             pbLay.spacing = 12; pbLay.childControlWidth = true; pbLay.childForceExpandWidth = true;
 
-            CreateButton(photoBtns.transform, "ReJamBtn", "Re-Test Jam", PaperBtn, 36f, () =>
-            {
-                StopActiveSpeech();
-                SoundManager.Instance?.Play("wrong_buzz", 0.45f);
-                PrinterJamEffect.Instance?.TriggerJamAgain();
-                OpenPrinterJamModal();
-            }, InkPrimary);
             CreateButton(photoBtns.transform, "ClosePhotoBtn", "Put Down", AccentSage, 36f, () =>
             {
                 StopActiveSpeech();

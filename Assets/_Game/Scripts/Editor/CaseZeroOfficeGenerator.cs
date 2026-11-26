@@ -94,17 +94,19 @@ namespace HealthFiles.EditorTools
             // Red Office Chair positioned RIGHT AT THE DESK (facing +Z toward Monitor: rotY = 270)
             PlacePrefabClean(roomRoot.transform, "OfficeChair", P_Chair, new Vector3(0f, 0f, 0.56f), 0.98f, 270f);
 
-            // 4. Interactable: Office Computer (exact auto-fit collider + LIVE WorldSpace HealthOS directly on the 3D glass!)
+            // 4. Interactable: Office Computer — ONLY PC_monitor highlights & clicks (keyboard & mouse stay non-clickable!)
             GameObject computerStation = PlacePrefabClean(roomRoot.transform, "OfficeComputer", P_PC, new Vector3(-0.04f, deskTopY + 0.006f, 1.39f), 0.42f, 90f);
             FixKeyboardAndMouseScale(computerStation, deskTopY + 0.006f);
+            Transform monitorTr = FindChildRecursive(computerStation.transform, "PC_monitor");
+            GameObject monitorClickable = monitorTr != null ? monitorTr.gameObject : computerStation;
             AddAutoFitColliderAndInteractable(
-                computerStation,
+                monitorClickable,
                 "desk_computer",
                 "Office Computer (Click to Zoom Into HealthOS)",
                 "Computer",
-                padding: 0.03f
+                padding: 0.02f
             );
-            Vector3 monitorScreenCenter = AttachWorldSpaceMonitorOS(computerStation, computerStation.GetComponent<BoxCollider>());
+            Vector3 monitorScreenCenter = AttachWorldSpaceMonitorOS(computerStation, monitorClickable.GetComponent<BoxCollider>());
 
             // PC Tower standing cleanly ON THE RIGHT CORNER OF THE DESK (visible while seated, with glowing green LED & click interaction!)
             GameObject pcTower = PlacePrefabClean(roomRoot.transform, "PCTower", P_PCCase, new Vector3(0.84f, deskTopY, 1.50f), 0.40f, 102f);
@@ -151,18 +153,26 @@ namespace HealthFiles.EditorTools
             // Sleek custom modern Wall Clock above the Archive Cabinet (clean recessed dial, 12 tick marks, live ticking hands!)
             BuildModernWallClock(roomRoot.transform, new Vector3(-3.26f, 2.48f, 2.20f));
 
-            // 9. LEFT WALL STATION 3: Office Printer with properly-seated output-tray jammed sheet & front-panel LED!
+            // 9. LEFT WALL STATION 3: Office Printer with sculpted crinkled/accordioned jammed paper & front-panel LED!
             GameObject printer = PlacePrefabClean(roomRoot.transform, "OfficePrinter", P_Printer, new Vector3(-2.74f, 0f, -1.15f), 0.96f, 0f);
             Bounds pb = GetWorldBounds(printer);
-            // Place jammed sheet emerging naturally out of the left output slot onto the tray
-            Vector3 sheetLocal = printer.transform.InverseTransformPoint(new Vector3(pb.center.x + 0.02f, pb.max.y - 0.24f, pb.min.z + 0.18f));
-            GameObject jammedSheet = CreateBox(printer.transform, "PrinterJammedSheet", sheetLocal, new Vector3(0.20f, 0.008f, 0.24f), new Color(0.95f, 0.94f, 0.89f), local: true, removeCollider: true);
-            jammedSheet.transform.localRotation = Quaternion.Euler(14f, 16f, -6f);
+            Vector3 jamOriginLocal = printer.transform.InverseTransformPoint(new Vector3(pb.center.x + 0.04f, pb.max.y - 0.25f, pb.min.z + 0.16f));
+            GameObject jammedGroup = new GameObject("PrinterJammedPaperGroup");
+            jammedGroup.transform.SetParent(printer.transform, false);
+            jammedGroup.transform.localPosition = jamOriginLocal;
+            // 3 folded/crinkled overlapping segments emerging crookedly out of the output slot!
+            GameObject seg1 = CreateBox(jammedGroup.transform, "JamSeg1", new Vector3(0f, 0f, 0.03f), new Vector3(0.15f, 0.006f, 0.09f), new Color(0.95f, 0.94f, 0.89f), local: true, removeCollider: true);
+            seg1.transform.localRotation = Quaternion.Euler(22f, 12f, -14f);
+            GameObject seg2 = CreateBox(jammedGroup.transform, "JamSeg2", new Vector3(0.01f, 0.022f, -0.02f), new Vector3(0.16f, 0.006f, 0.08f), new Color(0.90f, 0.89f, 0.84f), local: true, removeCollider: true);
+            seg2.transform.localRotation = Quaternion.Euler(-28f, -8f, 16f);
+            GameObject seg3 = CreateBox(jammedGroup.transform, "JamSeg3", new Vector3(-0.01f, 0.008f, -0.07f), new Vector3(0.14f, 0.006f, 0.09f), new Color(0.96f, 0.95f, 0.90f), local: true, removeCollider: true);
+            seg3.transform.localRotation = Quaternion.Euler(18f, 18f, -10f);
+
             // Small blinking error LED seated cleanly on the dark front control bezel (never on the paper tray!)
             Vector3 ledLocal = printer.transform.InverseTransformPoint(new Vector3(pb.max.x - 0.12f, pb.max.y - 0.28f, pb.center.z + 0.06f));
             GameObject jamLed = CreateBox(printer.transform, "PrinterJamLED", ledLocal, new Vector3(0.024f, 0.016f, 0.024f), new Color(1f, 0.28f, 0.08f), local: true, removeCollider: true);
             PrinterJamEffect jamFx = printer.AddComponent<PrinterJamEffect>();
-            jamFx.Configure(jamLed.GetComponent<Renderer>(), jammedSheet.transform);
+            jamFx.Configure(jamLed.GetComponent<Renderer>(), jammedGroup.transform);
             AddAutoFitColliderAndInteractable(
                 printer,
                 "printer_daniel",
@@ -189,16 +199,23 @@ namespace HealthFiles.EditorTools
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureA", P_CeilingLight, new Vector3(-1.1f, 3.12f, 0.6f), 0.14f, 0f);
             PlacePrefabClean(roomRoot.transform, "CeilingFixtureB", P_CeilingLight, new Vector3(1.1f, 3.12f, 0.6f), 0.14f, 0f);
 
-            // 12. Camera Viewpoints (VP_Computer zooms right up so the live 3D WorldSpace Monitor fills the screen!)
+            // 12. Camera Viewpoints (including editable VP_Drawer1/2/3 + wider mouse-look on Bookshelf so sofa & window show!)
             GameObject vpRoot = new GameObject("--- VIEWPOINTS (WP2) ---");
+            CameraViewpoint vpBookshelf = CreateViewpoint(vpRoot.transform, "Bookshelf", "Bookshelf", new Vector3(1.55f, 1.24f, 1.80f), new Vector3(2.96f, 1.18f, 1.80f));
+            vpBookshelf.customParallaxMaxYaw = 34f; // Lets you smoothly glance right toward the visitor sofa & panoramic city window!
+
             List<CameraViewpoint> viewpoints = new List<CameraViewpoint>
             {
                 CreateViewpoint(vpRoot.transform, "Desk", "Desk", new Vector3(0f, 1.44f, 0.36f), new Vector3(0f, 0.98f, 1.65f)),
                 CreateViewpoint(vpRoot.transform, "Computer", "Computer", monitorScreenCenter + new Vector3(0f, 0f, -0.45f), monitorScreenCenter),
                 CreateViewpoint(vpRoot.transform, "Cabinet", "Cabinet", new Vector3(-1.02f, 1.56f, 2.20f), new Vector3(-2.62f, 0.70f, 2.20f)),
-                CreateViewpoint(vpRoot.transform, "Bookshelf", "Bookshelf", new Vector3(1.55f, 1.24f, 1.80f), new Vector3(2.96f, 1.18f, 1.80f)),
+                vpBookshelf,
                 CreateViewpoint(vpRoot.transform, "Printer", "Printer", new Vector3(-1.15f, 1.22f, -1.15f), new Vector3(-2.74f, 0.68f, -1.15f)),
-                CreateViewpoint(vpRoot.transform, "EvidenceBoard", "Evidence Board", new Vector3(-1.35f, 1.78f, 0.55f), new Vector3(-3.24f, 1.78f, 0.55f))
+                CreateViewpoint(vpRoot.transform, "EvidenceBoard", "Evidence Board", new Vector3(-1.35f, 1.78f, 0.55f), new Vector3(-3.24f, 1.78f, 0.55f)),
+                // Dedicated editable open-drawer cameras (select in Hierarchy -> Ctrl+Shift+F in Scene View to customize!)
+                CreateViewpoint(vpRoot.transform, "Drawer1", "Drawer B-01", new Vector3(-1.90f, 1.98f, 2.20f), new Vector3(-2.34f, 1.00f, 2.20f)),
+                CreateViewpoint(vpRoot.transform, "Drawer2", "Drawer B-02", new Vector3(-1.90f, 1.58f, 2.20f), new Vector3(-2.34f, 0.58f, 2.20f)),
+                CreateViewpoint(vpRoot.transform, "Drawer3", "Drawer B-03", new Vector3(-1.90f, 1.18f, 2.20f), new Vector3(-2.34f, 0.20f, 2.20f))
             };
 
             // 13. Main Camera + High-Quality SMAA Anti-Aliasing (crisp edges even when standing still!) + OfficeRaycaster
@@ -237,6 +254,7 @@ namespace HealthFiles.EditorTools
             sysObj.AddComponent<PersonalizationManager>();
             sysObj.AddComponent<MissionManager>();
             sysObj.AddComponent<CaseZeroHUD>();
+            sysObj.AddComponent<MainMenuOverlay>();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[]
@@ -245,12 +263,7 @@ namespace HealthFiles.EditorTools
             };
 
             AssetDatabase.Refresh();
-            Debug.Log("[HealthFiles] Polished Full-Glass Modern 3D Detective Office built!");
-            EditorUtility.DisplayDialog(
-                "Health Files: Case Zero",
-                "Full-Glass Modern Detective Office rebuilt!\n\n- Full floor-to-ceiling glass back wall + unmistakable office door\n- Living hallway + neighboring glass Conference Room across the corridor\n- Cork Evidence Board cleanly mounted on left wall\n- Modern IP office phone + desk mat + enlarged keyboard & mouse\n- PC tower clear of desk + perfectly aligned sofa & coffee table",
-                "Awesome!"
-            );
+            Debug.Log("[HealthFiles] OfficeScene rebuilt cleanly!");
         }
 
         private static void FixKeyboardAndMouseScale(GameObject pcRoot, float surfaceY)
@@ -402,12 +415,20 @@ namespace HealthFiles.EditorTools
             rend.sharedMaterial = mat;
         }
 
-        private static void AddWorldSignText(Transform parent, string name, Vector3 pos, Quaternion rot, Vector2 sizeMeters, string content, int fontSize, Color textColor)
+        private static void AddWorldSignText(Transform parent, string name, Vector3 pos, Quaternion rot, Vector2 sizeMeters, string content, int fontSize, Color textColor, bool local = false)
         {
             GameObject canvasGo = new GameObject(name);
             canvasGo.transform.SetParent(parent, false);
-            canvasGo.transform.position = pos;
-            canvasGo.transform.rotation = rot;
+            if (local)
+            {
+                canvasGo.transform.localPosition = pos;
+                canvasGo.transform.localRotation = rot;
+            }
+            else
+            {
+                canvasGo.transform.position = pos;
+                canvasGo.transform.rotation = rot;
+            }
 
             Canvas c = canvasGo.AddComponent<Canvas>();
             c.renderMode = RenderMode.WorldSpace;
@@ -616,12 +637,14 @@ namespace HealthFiles.EditorTools
             // Street level is 11 meters below our 5th-floor office!
             CreateBox(ext.transform, "City_StreetGround", new Vector3(18f, -11.2f, -2f), new Vector3(32f, 0.4f, 44f), new Color(0.42f, 0.44f, 0.46f), removeCollider: true);
 
-            // Midground avenue buildings (ONLY visible ones — removed unseen rear towers & hidden trees for clean rendering!)
+            // Full midground avenue skyline covering both right & left window views (keeping far rear open for clouds!)
             BuildCitySkyscraper(ext.transform, "City_FarRightLow1", new Vector3(14.8f, -11f, -21.0f), new Vector3(3.6f, 13.4f, 4.2f), new Color(0.82f, 0.72f, 0.62f), 5, 4);
             BuildCitySkyscraper(ext.transform, "City_FarRightLow2", new Vector3(15.2f, -11f, -15.8f), new Vector3(3.8f, 14.2f, 4.4f), new Color(0.76f, 0.76f, 0.72f), 5, 4);
             BuildCitySkyscraper(ext.transform, "City_Mid1", new Vector3(14.5f, -11f, -9.8f), new Vector3(3.4f, 21.0f, 3.8f), new Color(0.76f, 0.72f, 0.66f), 8, 4);
             BuildCitySkyscraper(ext.transform, "City_Mid2", new Vector3(15.2f, -11f, -5.4f), new Vector3(3.6f, 24.5f, 4.0f), new Color(0.64f, 0.70f, 0.78f), 9, 5);
             BuildCitySkyscraper(ext.transform, "City_Mid3", new Vector3(14.0f, -11f, -1.1f), new Vector3(3.2f, 19.5f, 3.6f), new Color(0.80f, 0.76f, 0.70f), 7, 4);
+            BuildCitySkyscraper(ext.transform, "City_Mid4", new Vector3(15.4f, -11f,  3.4f), new Vector3(3.5f, 23.0f, 3.8f), new Color(0.62f, 0.68f, 0.76f), 9, 5);
+            BuildCitySkyscraper(ext.transform, "City_Mid5", new Vector3(14.4f, -11f,  7.8f), new Vector3(3.4f, 18.5f, 3.8f), new Color(0.75f, 0.71f, 0.65f), 7, 4);
 
             // 7 widely-spaced fluffy clouds spanning the FULL blue sky height (y = 5.2 .. 11.2m), spawning off-screen right (z = -38) and wrapping behind the tall skyscrapers!
             BuildDriftingCloud(ext.transform, "SkyCloud_1", new Vector3(20.5f,  5.4f, -36.5f), 0.76f);
@@ -632,12 +655,11 @@ namespace HealthFiles.EditorTools
             BuildDriftingCloud(ext.transform, "SkyCloud_6", new Vector3(22.0f,  9.4f, -11.5f), 0.92f);
             BuildDriftingCloud(ext.transform, "SkyCloud_7", new Vector3(21.0f,  8.2f,  -6.5f), 0.84f);
 
-            // Only the 3 boulevard trees actually visible through the panoramic window!
-            float[] treeZs = { -11.5f, -6.5f, -2.6f };
-            for (int t = 0; t < treeZs.Length; t++)
-            {
-                BuildOrganicBoulevardTree(ext.transform, $"City_Tree_{t}", new Vector3(10.5f, -11f, treeZs[t]));
-            }
+            // Varied organic boulevard trees with distinct heights, crown shapes, and leaf tones!
+            BuildOrganicBoulevardTree(ext.transform, "City_Tree_0", new Vector3(10.8f, -11f, -13.2f), 0.92f, 1.12f,  0.00f,  18f);
+            BuildOrganicBoulevardTree(ext.transform, "City_Tree_1", new Vector3(10.2f, -11f,  -8.4f), 1.08f, 0.94f,  0.04f,  95f);
+            BuildOrganicBoulevardTree(ext.transform, "City_Tree_2", new Vector3(10.6f, -11f,  -3.6f), 0.98f, 1.18f, -0.03f, 210f);
+            BuildOrganicBoulevardTree(ext.transform, "City_Tree_3", new Vector3(10.4f, -11f,   1.8f), 1.05f, 1.02f,  0.02f, 305f);
         }
 
         private static void BuildDriftingCloud(Transform parent, string name, Vector3 pos, float scale)
@@ -655,23 +677,23 @@ namespace HealthFiles.EditorTools
             CreateSphere(cloud.transform, $"{name}_P4", new Vector3(0f, 0.65f, 0.2f), new Vector3(1.5f, 1.0f, 1.6f), cWhite);
         }
 
-        private static void BuildOrganicBoulevardTree(Transform parent, string name, Vector3 groundPos)
+        private static void BuildOrganicBoulevardTree(Transform parent, string name, Vector3 groundPos, float heightScale, float widthScale, float tintShift, float yawDeg)
         {
             GameObject tree = new GameObject(name);
             tree.transform.SetParent(parent, false);
             tree.transform.position = groundPos;
+            tree.transform.rotation = Quaternion.Euler(0f, yawDeg, 0f);
+            tree.transform.localScale = new Vector3(widthScale, heightScale, widthScale);
 
-            // Tall trunk rising from street level (-11m) up to ~-2.5m
             CreateBox(tree.transform, $"{name}_Trunk", new Vector3(0f, 4.2f, 0f), new Vector3(0.45f, 8.4f, 0.45f), new Color(0.34f, 0.25f, 0.18f), local: true, removeCollider: true);
 
-            // Multi-sphere layered lush foliage crown (only top tips peek gently below the 5th-floor sill!)
-            Color leaf1 = new Color(0.24f, 0.44f, 0.28f);
-            Color leaf2 = new Color(0.30f, 0.52f, 0.32f);
-            Color leaf3 = new Color(0.20f, 0.38f, 0.24f);
-            CreateSphere(tree.transform, $"{name}_CrownMain", new Vector3(0f, 9.2f, 0f), new Vector3(2.8f, 2.3f, 2.8f), leaf1);
-            CreateSphere(tree.transform, $"{name}_CrownTop", new Vector3(0.2f, 10.3f, 0.1f), new Vector3(2.0f, 1.7f, 2.0f), leaf2);
-            CreateSphere(tree.transform, $"{name}_CrownSideA", new Vector3(-0.7f, 9.0f, 0.8f), new Vector3(1.9f, 1.6f, 1.9f), leaf3);
-            CreateSphere(tree.transform, $"{name}_CrownSideB", new Vector3(0.6f, 8.8f, -0.9f), new Vector3(2.1f, 1.7f, 2.1f), leaf2);
+            Color leaf1 = new Color(Mathf.Clamp01(0.24f + tintShift), Mathf.Clamp01(0.44f + tintShift), 0.28f);
+            Color leaf2 = new Color(Mathf.Clamp01(0.30f + tintShift), Mathf.Clamp01(0.52f + tintShift), 0.32f);
+            Color leaf3 = new Color(Mathf.Clamp01(0.20f + tintShift), Mathf.Clamp01(0.38f + tintShift), 0.24f);
+            CreateSphere(tree.transform, $"{name}_CrownMain",  new Vector3(0f,    9.2f,  0f),    new Vector3(2.8f, 2.2f, 2.7f), leaf1);
+            CreateSphere(tree.transform, $"{name}_CrownTop",   new Vector3(0.3f, 10.35f, 0.15f), new Vector3(2.1f, 1.8f, 1.9f), leaf2);
+            CreateSphere(tree.transform, $"{name}_CrownSideA", new Vector3(-0.8f, 9.1f,  0.9f),  new Vector3(1.9f, 1.5f, 2.0f), leaf3);
+            CreateSphere(tree.transform, $"{name}_CrownSideB", new Vector3(0.7f,  8.9f, -0.95f), new Vector3(2.2f, 1.7f, 1.9f), leaf2);
         }
 
         private static void CreateSphere(Transform parent, string name, Vector3 localPos, Vector3 scale, Color color)
@@ -766,7 +788,7 @@ namespace HealthFiles.EditorTools
             GameObject phoneRoot = new GameObject("DeskTelephone");
             phoneRoot.transform.SetParent(parent, false);
             phoneRoot.transform.position = pos;
-            phoneRoot.transform.rotation = Quaternion.Euler(0f, 20f, 0f);
+            phoneRoot.transform.rotation = Quaternion.Euler(0f, -26f, 0f);
 
             Color graphite = new Color(0.16f, 0.18f, 0.21f);
             Color charcoal = new Color(0.10f, 0.11f, 0.14f);
@@ -1293,22 +1315,59 @@ namespace HealthFiles.EditorTools
                 SlidingDrawer sd = drawerObj.AddComponent<SlidingDrawer>();
                 sd.drawerTitle = titles[i];
                 sd.openLocalOffset = new Vector3(0.46f, 0f, 0f);
+                sd.openDrawerViewpointId = $"Drawer{i + 1}";
                 sd.containsAlexLetter = (i == 1);
                 sd.emptyMessage = emptyMsgs[i];
 
                 AddCleanColliderAndInteractable(drawerObj, ids[i], $"Slide Open {titles[i]}", "Cabinet", new Vector3(0.09f, 0.39f, 0.56f), new Vector3(0.32f, 0f, 0f));
 
+                // Populate EVERY drawer with upright hanging manila file folders (real archive cabinet look!)
+                Color[] folderPalette =
+                {
+                    new Color(0.84f, 0.78f, 0.64f),
+                    new Color(0.76f, 0.80f, 0.74f),
+                    new Color(0.82f, 0.75f, 0.66f),
+                    new Color(0.74f, 0.78f, 0.82f)
+                };
+                float[] folderXs = { -0.20f, -0.14f, -0.08f, -0.02f, 0.14f, 0.20f };
+                for (int fIdx = 0; fIdx < folderXs.Length; fIdx++)
+                {
+                    float fx = folderXs[fIdx];
+                    Color fCol = folderPalette[(fIdx + i) % folderPalette.Length];
+                    CreateBox(drawerObj.transform, $"Folder_{i + 1}_{fIdx}", new Vector3(fx, -0.035f, 0f), new Vector3(0.014f, 0.205f, 0.44f), fCol, local: true, removeCollider: true);
+                    // Staggered top index tab on each manila folder
+                    float tabZ = -0.14f + (fIdx % 3) * 0.14f;
+                    CreateBox(drawerObj.transform, $"FolderTab_{i + 1}_{fIdx}", new Vector3(fx, 0.075f, tabZ), new Vector3(0.012f, 0.022f, 0.09f), fCol * 0.92f, local: true, removeCollider: true);
+                }
+
                 if (i == 1)
                 {
+                    // Alex Moretti's upright sculpted Kraft-Gold Confidential Envelope peeking neatly between the archive folders!
                     GameObject env = new GameObject("AlexHiddenEnvelope");
                     env.transform.SetParent(drawerObj.transform, false);
-                    env.transform.localPosition = new Vector3(0.04f, -0.115f, 0f);
-                    env.transform.localRotation = Quaternion.Euler(0f, 8f, 0f);
+                    env.transform.localPosition = new Vector3(0.06f, -0.015f, 0f);
+                    env.transform.localRotation = Quaternion.Euler(0f, 0f, -4f);
 
-                    CreateBox(env.transform, "EnvelopeBody", Vector3.zero, new Vector3(0.28f, 0.028f, 0.36f), new Color(0.96f, 0.86f, 0.45f), local: true, removeCollider: true);
-                    CreateBox(env.transform, "RedWaxSeal", new Vector3(0f, 0.018f, 0f), new Vector3(0.06f, 0.01f, 0.06f), new Color(0.82f, 0.14f, 0.14f), local: true, removeCollider: true);
+                    Color envKraft = new Color(0.95f, 0.84f, 0.50f);
+                    Color envFlap = new Color(0.89f, 0.76f, 0.40f);
+                    CreateBox(env.transform, "EnvelopeBody", Vector3.zero, new Vector3(0.014f, 0.235f, 0.34f), envKraft, local: true, removeCollider: true);
+                    // Subtle upper envelope flap fold line (front face toward +X)
+                    CreateBox(env.transform, "EnvelopeFlapTop", new Vector3(0.008f, 0.085f, 0f), new Vector3(0.004f, 0.055f, 0.335f), envFlap, local: true, removeCollider: true);
+                    // Small flat round crimson wax seal disc (NOT a chunky red box!)
+                    GameObject seal = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    seal.name = "WaxSealDisc";
+                    seal.transform.SetParent(env.transform, false);
+                    seal.transform.localPosition = new Vector3(0.010f, 0.055f, 0f);
+                    seal.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                    seal.transform.localScale = new Vector3(0.032f, 0.003f, 0.032f);
+                    Object.DestroyImmediate(seal.GetComponent<Collider>());
+                    ApplyColorMaterial(seal.GetComponent<Renderer>(), "EnvelopeWaxSeal", new Color(0.68f, 0.12f, 0.14f));
 
-                    AddCleanColliderAndInteractable(env, "cabinet_alex_letter", "Alex Moretti's Yellow Envelope (Pick Up!)", "Cabinet", new Vector3(0.32f, 0.12f, 0.40f), new Vector3(0f, 0.02f, 0f));
+                    // Crisp readable front & top label on the standing envelope so you spot 'A. MORETTI' immediately!
+                    AddWorldSignText(env.transform, "EnvelopeTopTabText", new Vector3(0.011f, 0.095f, 0f), Quaternion.Euler(0f, -90f, 0f), new Vector2(0.30f, 0.045f),
+                        "<b>A. MORETTI — CONFIDENTIAL</b>", 24, new Color(0.45f, 0.10f, 0.10f), local: true);
+
+                    AddCleanColliderAndInteractable(env, "cabinet_alex_letter", "Alex Moretti's Confidential Envelope (Pick Up!)", "", new Vector3(0.08f, 0.26f, 0.36f), Vector3.zero);
                 }
             }
         }

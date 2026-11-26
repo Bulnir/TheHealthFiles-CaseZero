@@ -77,6 +77,11 @@ namespace HealthFiles
             {
                 jammedPaperTransform.gameObject.SetActive(false);
             }
+            InteractableObject inter = GetComponent<InteractableObject>();
+            if (inter != null)
+            {
+                inter.displayLabel = "Office Printer (Online — Ready)";
+            }
             OnJamCleared?.Invoke();
         }
 
@@ -86,6 +91,11 @@ namespace HealthFiles
             if (jammedPaperTransform != null)
             {
                 jammedPaperTransform.gameObject.SetActive(true);
+            }
+            InteractableObject inter = GetComponent<InteractableObject>();
+            if (inter != null)
+            {
+                inter.displayLabel = "Office Printer (WARNING: PAPER JAM! Click to Fix)";
             }
         }
     }

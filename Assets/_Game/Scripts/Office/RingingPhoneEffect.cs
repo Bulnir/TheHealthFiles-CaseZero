@@ -59,8 +59,11 @@ namespace HealthFiles
 
         private void Update()
         {
-            if (!shouldRing)
+            if (!shouldRing || MainMenuOverlay.IsActive)
+            {
+                transform.localRotation = baseRotation;
                 return;
+            }
 
             timer += Time.deltaTime;
             if (timer >= ringIntervalSeconds)
