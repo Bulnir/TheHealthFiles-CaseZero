@@ -99,7 +99,7 @@ namespace HealthFiles
 
             isOpen = willOpen;
             if (innerItemCollider != null) innerItemCollider.enabled = isOpen;
-            SoundManager.Instance?.Play("drawer_slide", 0.8f);
+            SoundManager.Instance?.Play("drawer_slide", 0.34f);
 
             // Elevate & angle camera steeply right above the open drawer (prefers editable VP_Drawer1/2/3 viewpoint!)
             if (CameraViewpointController.Instance != null)
